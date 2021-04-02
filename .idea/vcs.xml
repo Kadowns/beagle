@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="VcsDirectoryMappings">
+    <mapping directory="$PROJECT_DIR$" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/external/eagle" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/external/eagle/examples/external/entityx" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/external/eagle/examples/external/glm" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/external/eagle/examples/external/imgui" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/external/eagle/external/glfw" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/external/eagle/external/glslang" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/external/eagle/external/spdlog" vcs="Git" />
+  </component>
+</project>

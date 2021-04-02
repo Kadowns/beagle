@@ -1,0 +1,3 @@
+[submodule "external/eagle"]
+	path = external/eagle
+	url = git@github.com:Kadowns/eagle.git
