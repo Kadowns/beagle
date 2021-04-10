@@ -2,8 +2,8 @@
 // Created by Ricardo on 3/25/2021.
 //
 
-#ifndef BEAGLE_ENTITY_MANAGER_H
-#define BEAGLE_ENTITY_MANAGER_H
+#ifndef BEAGLE_ENTITY_H
+#define BEAGLE_ENTITY_H
 
 #include <cstdint>
 #include <bitset>
@@ -421,7 +421,10 @@ public:
 
         bool operator!=(const Iterator& rhs) const { return m_i != rhs.m_i; }
 
-        Entity operator*() { return m_group->operator[](m_i); }
+
+        std::tuple<Component<Components>...> operator*() {
+            return m_group->operator[](m_i).template components<Components...>();
+        }
 
         explicit Iterator(EntityGroup *group, size_t i) : m_group(group), m_i(i), m_capacity(m_group->size()){}
 
@@ -491,7 +494,7 @@ public:
     }
 
 private:
-    EntityManager* m_manager;
+    EntityManager* m_manager = nullptr;
     ComponentMask m_mask;
     eagle::EventListener m_listener;
     std::vector<Entity::Id> m_entities;
@@ -524,4 +527,4 @@ std::tuple<Component<Components>...> Entity::components() {
 
 }
 
-#endif //BEAGLE_ENTITY_MANAGER_H
+#endif //BEAGLE_ENTITY_H

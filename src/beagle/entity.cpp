@@ -2,7 +2,7 @@
 // Created by Ricardo on 3/25/2021.
 //
 
-#include "entity_manager.h"
+#include "entity.h"
 
 namespace beagle {
 
