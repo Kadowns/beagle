@@ -1,3 +1,9 @@
 [submodule "external/eagle"]
 	path = external/eagle
 	url = git@github.com:Kadowns/eagle.git
+[submodule "external/glm"]
+	path = external/glm
+	url = git@github.com:g-truc/glm.git
+[submodule "external/rapidjson"]
+	path = external/rapidjson
+	url = git@github.com:Tencent/rapidjson.git

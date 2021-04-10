@@ -1,7 +1,6 @@
 //
 // Created by Ricardo on 3/25/2021.
 //
-//Code HEAVILY inspired on entityx, with a few changes on how systems iterate entities and how components are allocated
 
 #ifndef BEAGLE_ENTITY_MANAGER_H
 #define BEAGLE_ENTITY_MANAGER_H
@@ -61,6 +60,9 @@ public:
 
     template<typename T>
     Component<T> component();
+
+    template<typename ...Components>
+    std::tuple<Component<Components>...> components();
 
     template<typename T>
     void remove();
@@ -230,7 +232,6 @@ public:
     };
 
 public:
-    explicit EntityManager(eagle::EventBus& eventBus) : m_eventBus(eventBus) {}
 
     virtual ~EntityManager() {
         reset();
@@ -343,6 +344,11 @@ public:
         return Component<T>(entity_from_id(entity), component_ptr<T>(entity));
     }
 
+    template<typename ...Components>
+    std::tuple<Component<Components>...> components_from_entity(Entity::Id entity){
+        return std::make_tuple(component_from_entity<Components>(entity)...);
+    }
+
     inline const ComponentMask& component_mask(Entity::Id entity) const {
         return m_entityComponentMask[entity.index()];
     }
@@ -391,7 +397,7 @@ private:
     template<typename ...Components>
     friend class EntityGroup;
 
-    eagle::EventBus& m_eventBus;
+    eagle::EventBus m_eventBus;
     std::vector<ComponentMask> m_entityComponentMask;
     std::vector<ComponentPool*> m_componentPools;
     std::vector<BaseComponentHelper*> m_componentHelpers;
@@ -426,12 +432,20 @@ public:
     };
 
 public:
-    explicit EntityGroup(EntityManager* manager) : m_manager(manager) {
-        m_listener.attach(&manager->m_eventBus);
+
+    EntityGroup() {
         for_types<Components...>([this](auto t){
             using Component = typename decltype(t)::type;
             m_mask.set(m_manager->component_family<Component>());
+        });
+    }
 
+    void attach(EntityManager* manager){
+        detach();
+        m_manager = manager;
+        m_listener.attach(&manager->m_eventBus);
+        for_types<Components...>([this](auto t){
+            using Component = typename decltype(t)::type;
             m_listener.template subscribe<OnComponentAdded<Component>>([this](const OnComponentAdded<Component>& ev){
                 if ((ev.component.owner().component_mask() & m_mask) == m_mask){
                     auto it = std::find(m_entities.begin(), m_entities.end(), ev.component.owner().id());
@@ -452,16 +466,23 @@ public:
         });
 
         for (auto entity : m_manager->all()){
-            if (entity.valid() && (entity.component_mask() & m_mask) == m_mask){
+            if ((entity.component_mask() & m_mask) == m_mask){
                 m_entities.emplace_back(entity.id());
             }
         }
     }
 
+    void detach(){
+        m_entities.clear();
+        m_listener.detach();
+        m_mask.reset();
+        m_manager = nullptr;
+    }
+
     Iterator begin() { return Iterator(this, 0); }
     Iterator end() { return Iterator(this, size()); }
-    const Iterator begin() const { return Iterator(this, 0); }
-    const Iterator end() const { return Iterator(this, size()); }
+    Iterator begin() const { return Iterator(this, 0); }
+    Iterator end() const { return Iterator(this, size()); }
 
     inline size_t size() const { return m_entities.size(); }
 
@@ -494,6 +515,11 @@ void Entity::remove() {
 template<typename T>
 Component<T> Entity::component() {
     return m_manager->template component_from_entity<T>(m_id);
+}
+
+template<typename... Components>
+std::tuple<Component<Components>...> Entity::components() {
+    return m_manager->components_from_entity<Components...>(m_id);
 }
 
 }
