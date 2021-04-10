@@ -1,0 +1,16 @@
+{
+  "name": "color",
+  "stages": [
+    {
+      "stage": "vertex",
+      "filepath": "color.vert.spv"
+    },
+    {
+      "stage": "fragment",
+      "filepath": "color.frag.spv"
+    }
+  ],
+  "blendEnable": "false",
+  "depthTesting": "true",
+  "dynamicStates": "false"
+}

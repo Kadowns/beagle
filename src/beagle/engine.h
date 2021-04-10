@@ -5,28 +5,26 @@
 #ifndef BEAGLE_ENGINE_H
 #define BEAGLE_ENGINE_H
 
-#include <beagle/entity_manager.h>
+#include <beagle/entity.h>
+#include <beagle/components/transform.h>
 
 #include <eagle/application_delegate.h>
+#include <eagle/timer.h>
 
 #include <eagle/renderer/rendering_context.h>
 #include <eagle/renderer/command_buffer.h>
+#include <eagle/events/window_events.h>
 
 namespace beagle {
 
-struct Transform {
-    float position[3];
-    float rotation[4];
-    float scale[3];
-};
-
-struct Rigidbody {
-    float velocity[3];
+struct Oscilator {
+    float amplitude = 1.0f;
+    float frequency = 1.0f;
+    glm::vec3 anchor;
 };
 
 class Engine : public eagle::ApplicationDelegate {
 public:
-    Engine();
 
     void init() override;
 
@@ -34,11 +32,21 @@ public:
 
     void destroy() override;
 
+    bool receive(const eagle::OnWindowClose& ev);
+
 private:
-    eagle::EventBus m_entityEventBus;
-    EntityManager m_entityManager;
-    EntityGroup<Transform, Rigidbody> m_physicsGroup;
+    eagle::EventListener m_listener;
+    eagle::Timer m_timer;
     std::weak_ptr<eagle::CommandBuffer> m_commandBuffer;
+    std::weak_ptr<eagle::VertexBuffer> m_vertexBuffer;
+    std::weak_ptr<eagle::IndexBuffer> m_indexBuffer;
+    std::weak_ptr<eagle::Shader> m_shader;
+
+
+
+    EntityManager m_entityManager;
+    EntityGroup<Transform> m_quadsGroup;
+    EntityGroup<Transform, Oscilator> m_oscilatorGroup;
 
 };
 

@@ -9,52 +9,104 @@
 
 namespace beagle {
 
-Engine::Engine() : m_entityManager(m_entityEventBus), m_physicsGroup(&m_entityManager){
+struct Rigidbody {
 
-}
+};
 
 void beagle::Engine::init() {
+
+    m_listener.attach(&eagle::Application::instance().event_bus());
+    m_listener.receive<eagle::OnWindowClose>(this);
 
     auto context = eagle::Application::instance().window().rendering_context();
 
     eagle::CommandBufferCreateInfo commandBufferCreateInfo = {};
-    commandBufferCreateInfo.updateType = eagle::UpdateType::DYNAMIC;
     commandBufferCreateInfo.level = eagle::CommandBufferLevel::MASTER;
 
     m_commandBuffer = context->create_command_buffer(commandBufferCreateInfo);
 
+    m_vertexBuffer = context->create_vertex_buffer({eagle::UpdateType::DYNAMIC});
+    m_indexBuffer = context->create_index_buffer({eagle::UpdateType::DYNAMIC, eagle::IndexBufferType::UINT_16});
+
+    eagle::ShaderCreateInfo shaderCreateInfo = {
+            context->main_render_pass(),
+            {
+                {eagle::ShaderStage::FRAGMENT, "assets/shaders/color.frag.spv"},
+                {eagle::ShaderStage::VERTEX, "assets/shaders/color.vert.spv"},
+            }
+    };
+    shaderCreateInfo.vertexLayout = eagle::VertexLayout{eagle::Format::R32G32B32_SFLOAT, eagle::Format::R32G32B32A32_SFLOAT};
+    m_shader = context->create_shader(shaderCreateInfo);
+
     auto e = m_entityManager.create();
-    auto tr = e.assign<Transform>();
-    tr->position[0] = 0;
-    tr->position[1] = 0;
-    tr->position[2] = 0;
+    e.assign<Transform>(glm::vec3(0, 0, 0));
 
-    tr->rotation[0] = 0;
-    tr->rotation[1] = 0;
-    tr->rotation[2] = 0;
-    tr->rotation[3] = 1;
+    e = m_entityManager.create();
+    auto tr = e.assign<Transform>(glm::vec3(0.5, 0, 0));
+    auto osc = e.assign<Oscilator>();
+    osc->anchor = tr->position;
 
-    tr->scale[0] = 1;
-    tr->scale[1] = 1;
-    tr->scale[2] = 1;
-
-    auto rb = e.assign<Rigidbody>();
-    rb->velocity[0] = 10;
-    rb->velocity[1] = 5;
-    rb->velocity[2] = 0;
-
+    m_quadsGroup.attach(&m_entityManager);
+    m_oscilatorGroup.attach(&m_entityManager);
+    m_timer.start();
 }
 
 void beagle::Engine::step() {
 
-    for (auto entity : m_physicsGroup){
-        auto tr = entity.component<Transform>();
-        auto rb = entity.component<Rigidbody>();
+    m_timer.update();
 
-        tr->position[0] += rb->velocity[0];
-        tr->position[1] += rb->velocity[1];
-        tr->position[2] += rb->velocity[2];
+    float t = m_timer.time();
+
+    for (auto[tr, osc] : m_oscilatorGroup){
+        tr->position = osc->anchor;
+        tr->position.x = sinf(t * osc->frequency) * osc->amplitude;
     }
+
+    struct Vertex {
+        glm::vec3 position;
+        glm::vec4 color;
+    };
+
+    struct Quad {
+        Vertex vertices[4];
+    };
+
+    auto vb = m_vertexBuffer.lock();
+    auto ib = m_indexBuffer.lock();
+    vb->reserve(m_quadsGroup.size() * sizeof(Quad));
+    vb->clear();
+    ib->reserve(m_quadsGroup.size() * sizeof(uint16_t) * 6);
+    ib->clear();
+    int index = 0;
+    for (auto[tr] : m_quadsGroup){
+
+        auto position = tr->position;
+
+        Quad quad = {{
+                    {glm::vec3(-0.1, -0.1, 0.0f) + position, glm::vec4(0.5f, 1.0f, 0.5f, 1.0f)},
+                    {glm::vec3(0.1, -0.1, 0.0f) + position, glm::vec4(1.0f, 1.0f, 0.5f, 1.0f)},
+                    {glm::vec3(-0.1, 0.1, 0.0f) + position, glm::vec4(0.5f, 1.0f, 1.0f, 1.0f)},
+                    {glm::vec3(0.1, 0.1, 0.0f) + position, glm::vec4(0.5f, 0.5f, 1.0f, 1.0f)},
+                }
+        };
+
+        uint16_t indices[6] = {
+                0, 1, 2, 1, 3, 2
+        };
+        indices[0] += index * 4;
+        indices[1] += index * 4;
+        indices[2] += index * 4;
+        indices[3] += index * 4;
+        indices[4] += index * 4;
+        indices[5] += index * 4;
+
+        vb->insert(&quad, sizeof(Quad));
+        ib->insert(indices, sizeof(uint16_t) * 6);
+        index++;
+    }
+    vb->upload();
+    ib->upload();
+
 
     auto context = eagle::Application::instance().window().rendering_context();
     if (!context->prepare_frame()){
@@ -63,6 +115,10 @@ void beagle::Engine::step() {
     auto commandBuffer = m_commandBuffer.lock();
     commandBuffer->begin();
     commandBuffer->begin_render_pass(context->main_render_pass(), context->main_frambuffer());
+    commandBuffer->bind_shader(m_shader.lock());
+    commandBuffer->bind_vertex_buffer(vb);
+    commandBuffer->bind_index_buffer(ib);
+    commandBuffer->draw_indexed(m_quadsGroup.size() * 6, 0, 0);
     commandBuffer->end_render_pass();
     commandBuffer->end();
 
@@ -70,7 +126,12 @@ void beagle::Engine::step() {
 }
 
 void beagle::Engine::destroy() {
+    m_listener.detach();
+}
 
+bool Engine::receive(const eagle::OnWindowClose& ev) {
+    eagle::Application::instance().quit();
+    return false;
 }
 
 }
