@@ -35,7 +35,9 @@ void beagle::Engine::init() {
                 {eagle::ShaderStage::VERTEX, "assets/shaders/color.vert.spv"},
             }
     };
-    shaderCreateInfo.vertexLayout = eagle::VertexLayout{eagle::Format::R32G32B32_SFLOAT, eagle::Format::R32G32B32A32_SFLOAT};
+    shaderCreateInfo.vertexLayout.add(0, eagle::Format::R32G32B32_SFLOAT);
+    shaderCreateInfo.vertexLayout.add(0, eagle::Format::R32G32B32A32_SFLOAT);
+
     m_shader = context->create_shader(shaderCreateInfo);
 
     auto e = m_entityManager.create();
