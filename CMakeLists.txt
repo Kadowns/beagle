@@ -6,14 +6,13 @@ set(CMAKE_CXX_STANDARD 17)
 set(BEAGLE_SOURCES
         src/beagle/beagle_global_definitions.h
         src/beagle/engine.cpp
-        src/beagle/entity.cpp
+        src/beagle/ecs/entity.cpp
+        src/beagle/ecs/job_system.cpp
         src/beagle/renderer/renderer.cpp
         )
 
 
 add_library(beagle STATIC ${BEAGLE_SOURCES})
-
-
 
 set(BUILD_STATIC_LIBS TRUE)
 
@@ -24,6 +23,7 @@ target_include_directories(beagle PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR}/src
         ${CMAKE_CURRENT_SOURCE_DIR}/external/glm
         ${CMAKE_CURRENT_SOURCE_DIR}/external/rapidjson/include
+        ${CMAKE_CURRENT_SOURCE_DIR}/external/grapphs/include
         )
 
 target_link_libraries(beagle PUBLIC eagle glm)
