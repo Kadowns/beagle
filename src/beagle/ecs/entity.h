@@ -367,7 +367,9 @@ private:
             m_entityComponentMask.resize(index + 1);
             m_entityVersions.resize(index + 1);
             for (auto pool : m_componentPools){
-                pool->expand(index);
+                if (pool){
+                    pool->expand(index);
+                }
             }
         }
     }
