@@ -5,8 +5,9 @@
 #ifndef BEAGLE_ENGINE_H
 #define BEAGLE_ENGINE_H
 
-#include <beagle/entity.h>
-#include <beagle/components/transform.h>
+#include <beagle/ecs/entity.h>
+#include <beagle/ecs/job_system.h>
+#include <beagle/ecs/components/transform.h>
 
 #include <eagle/application_delegate.h>
 #include <eagle/timer.h>
@@ -18,6 +19,12 @@
 namespace beagle {
 
 struct Oscilator {
+    float amplitude = 1.0f;
+    float frequency = 1.0f;
+    glm::vec3 anchor;
+};
+
+struct Scaler {
     float amplitude = 1.0f;
     float frequency = 1.0f;
     glm::vec3 anchor;
@@ -47,6 +54,9 @@ private:
     EntityManager m_entityManager;
     EntityGroup<Transform> m_quadsGroup;
     EntityGroup<Transform, Oscilator> m_oscilatorGroup;
+    EntityGroup<Transform, Scaler> m_scalerGroup;
+
+    JobSystem m_jobSystem;
 
 };
 

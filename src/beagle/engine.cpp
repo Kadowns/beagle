@@ -15,6 +15,10 @@ struct Rigidbody {
 
 void beagle::Engine::init() {
 
+    EG_LOG_PATTERN("[%T.%e] [%n] [%^%l%$] [%s:%#::%!()] %v");
+    EG_LOG_CREATE("beagle");
+    EG_LOG_LEVEL(spdlog::level::trace);
+
     m_listener.attach(&eagle::Application::instance().event_bus());
     m_listener.receive<eagle::OnWindowClose>(this);
 
@@ -42,89 +46,122 @@ void beagle::Engine::init() {
 
     auto e = m_entityManager.create();
     e.assign<Transform>(glm::vec3(0, 0, 0));
+    e.assign<Scaler>();
 
     e = m_entityManager.create();
-    auto tr = e.assign<Transform>(glm::vec3(0.5, 0, 0));
+    auto tr = e.assign<Transform>(glm::vec3(-0.5, 0.5, 0));
     auto osc = e.assign<Oscilator>();
+    e.assign<Scaler>();
     osc->anchor = tr->position;
+
+    e = m_entityManager.create();
+    tr = e.assign<Transform>(glm::vec3(0.5, -0.5, 0));
+    osc = e.assign<Oscilator>();
+    osc->frequency = -1;
+    osc->anchor = tr->position;
+
 
     m_quadsGroup.attach(&m_entityManager);
     m_oscilatorGroup.attach(&m_entityManager);
+    m_scalerGroup.attach(&m_entityManager);
+
+    EG_INFO("beagle", "scaler group size {0}", m_scalerGroup.size());
     m_timer.start();
+
+    auto oscilatorJob = m_jobSystem.add_job([this]{
+        float t = m_timer.time();
+
+        for (auto[tr, osc] : m_oscilatorGroup){
+            tr->position.x = osc->anchor.x + sinf(t * osc->frequency) * osc->amplitude;
+        }
+    });
+
+    auto scalerJob = m_jobSystem.add_job([this]{
+        float t = m_timer.time();
+
+        for (auto[tr, osc] : m_scalerGroup){
+            auto amplitude = osc->amplitude;
+            auto frequency = osc->frequency;
+            auto scale = tr->scale;
+            scale = glm::vec3(1) * (sinf(frequency * t) * amplitude);
+            tr->scale = scale;
+        }
+    });
+
+    auto quadJob = m_jobSystem.add_job([this]{
+
+        struct Vertex {
+            glm::vec3 position;
+            glm::vec4 color;
+        };
+
+        struct Quad {
+            Vertex vertices[4];
+        };
+
+        auto vb = m_vertexBuffer.lock();
+        auto ib = m_indexBuffer.lock();
+        vb->reserve(m_quadsGroup.size() * sizeof(Quad));
+        vb->clear();
+        ib->reserve(m_quadsGroup.size() * sizeof(uint16_t) * 6);
+        ib->clear();
+        int index = 0;
+        for (auto[tr] : m_quadsGroup){
+
+            auto position = tr->position;
+            auto scale = tr->scale;
+
+            Quad quad = {{
+                                 {(glm::vec3(-0.1, -0.1, 0.0f) * scale) + position, glm::vec4(0.5f, 1.0f, 0.5f, 1.0f)},
+                                 {(glm::vec3(0.1, -0.1, 0.0f) * scale) + position, glm::vec4(1.0f, 1.0f, 0.5f, 1.0f)},
+                                 {(glm::vec3(-0.1, 0.1, 0.0f) * scale) + position, glm::vec4(0.5f, 1.0f, 1.0f, 1.0f)},
+                                 {(glm::vec3(0.1, 0.1, 0.0f) * scale) + position, glm::vec4(0.5f, 0.5f, 1.0f, 1.0f)},
+                         }
+            };
+
+            uint16_t indices[6] = {
+                    0, 1, 2, 1, 3, 2
+            };
+            indices[0] += index * 4;
+            indices[1] += index * 4;
+            indices[2] += index * 4;
+            indices[3] += index * 4;
+            indices[4] += index * 4;
+            indices[5] += index * 4;
+
+            vb->insert(&quad, sizeof(Quad));
+            ib->insert(indices, sizeof(uint16_t) * 6);
+            index++;
+        }
+        vb->upload();
+        ib->upload();
+    });
+    m_jobSystem.add_dependency(quadJob, oscilatorJob);
+    m_jobSystem.add_dependency(quadJob, scalerJob);
+
+    auto renderJob = m_jobSystem.add_job([this]{
+        auto context = eagle::Application::instance().window().rendering_context();
+        if (!context->prepare_frame()){
+            return;
+        }
+        auto commandBuffer = m_commandBuffer.lock();
+        commandBuffer->begin();
+        commandBuffer->begin_render_pass(context->main_render_pass(), context->main_frambuffer());
+        commandBuffer->bind_shader(m_shader.lock());
+        commandBuffer->bind_vertex_buffer(m_vertexBuffer.lock());
+        commandBuffer->bind_index_buffer(m_indexBuffer.lock());
+        commandBuffer->draw_indexed(m_quadsGroup.size() * 6, 0, 0);
+        commandBuffer->end_render_pass();
+        commandBuffer->end();
+
+        context->present_frame(commandBuffer);
+    });
+    m_jobSystem.add_dependency(renderJob, quadJob);
 }
 
 void beagle::Engine::step() {
-
     m_timer.update();
-
-    float t = m_timer.time();
-
-    for (auto[tr, osc] : m_oscilatorGroup){
-        tr->position = osc->anchor;
-        tr->position.x = sinf(t * osc->frequency) * osc->amplitude;
-    }
-
-    struct Vertex {
-        glm::vec3 position;
-        glm::vec4 color;
-    };
-
-    struct Quad {
-        Vertex vertices[4];
-    };
-
-    auto vb = m_vertexBuffer.lock();
-    auto ib = m_indexBuffer.lock();
-    vb->reserve(m_quadsGroup.size() * sizeof(Quad));
-    vb->clear();
-    ib->reserve(m_quadsGroup.size() * sizeof(uint16_t) * 6);
-    ib->clear();
-    int index = 0;
-    for (auto[tr] : m_quadsGroup){
-
-        auto position = tr->position;
-
-        Quad quad = {{
-                    {glm::vec3(-0.1, -0.1, 0.0f) + position, glm::vec4(0.5f, 1.0f, 0.5f, 1.0f)},
-                    {glm::vec3(0.1, -0.1, 0.0f) + position, glm::vec4(1.0f, 1.0f, 0.5f, 1.0f)},
-                    {glm::vec3(-0.1, 0.1, 0.0f) + position, glm::vec4(0.5f, 1.0f, 1.0f, 1.0f)},
-                    {glm::vec3(0.1, 0.1, 0.0f) + position, glm::vec4(0.5f, 0.5f, 1.0f, 1.0f)},
-                }
-        };
-
-        uint16_t indices[6] = {
-                0, 1, 2, 1, 3, 2
-        };
-        indices[0] += index * 4;
-        indices[1] += index * 4;
-        indices[2] += index * 4;
-        indices[3] += index * 4;
-        indices[4] += index * 4;
-        indices[5] += index * 4;
-
-        vb->insert(&quad, sizeof(Quad));
-        ib->insert(indices, sizeof(uint16_t) * 6);
-        index++;
-    }
-    vb->upload();
-    ib->upload();
-
-
-    auto context = eagle::Application::instance().window().rendering_context();
-    if (!context->prepare_frame()){
-        return;
-    }
-    auto commandBuffer = m_commandBuffer.lock();
-    commandBuffer->begin();
-    commandBuffer->begin_render_pass(context->main_render_pass(), context->main_frambuffer());
-    commandBuffer->bind_shader(m_shader.lock());
-    commandBuffer->bind_vertex_buffer(vb);
-    commandBuffer->bind_index_buffer(ib);
-    commandBuffer->draw_indexed(m_quadsGroup.size() * 6, 0, 0);
-    commandBuffer->end_render_pass();
-    commandBuffer->end();
-
-    context->present_frame(commandBuffer);
+    m_jobSystem.execute();
 }
 
 void beagle::Engine::destroy() {
