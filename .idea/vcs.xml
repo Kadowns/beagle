@@ -10,6 +10,7 @@
     <mapping directory="$PROJECT_DIR$/external/eagle/external/glslang" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/external/eagle/external/spdlog" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/external/glm" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/external/grapphs" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/external/rapidjson" vcs="Git" />
   </component>
 </project>
