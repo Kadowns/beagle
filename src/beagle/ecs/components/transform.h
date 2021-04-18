@@ -13,7 +13,7 @@ struct Transform {
     Transform(
             const glm::vec3& position = glm::vec3(0),
             const glm::vec3& rotation = glm::vec3(0),
-            const glm::vec3& scale = glm::vec3(0)) :
+            const glm::vec3& scale = glm::vec3(1)) :
             position(position), rotation(rotation), scale(scale) {}
 
     inline glm::vec3 front()    const { return rotation * glm::vec3(0.0f, 0.0f, -1.0f); }
