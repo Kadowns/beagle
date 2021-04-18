@@ -480,7 +480,6 @@ public:
     void detach(){
         m_entities.clear();
         m_listener.detach();
-        m_mask.reset();
         m_manager = nullptr;
     }
 
