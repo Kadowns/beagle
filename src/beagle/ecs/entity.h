@@ -428,12 +428,11 @@ public:
             return m_group->operator[](m_i).template components<Components...>();
         }
 
-        explicit Iterator(EntityGroup *group, size_t i) : m_group(group), m_i(i), m_capacity(m_group->size()){}
+        explicit Iterator(EntityGroup *group, size_t i) : m_group(group), m_i(i) {}
 
     protected:
         EntityGroup *m_group;
         uint32_t m_i;
-        uint32_t m_capacity;
     };
 
 public:
