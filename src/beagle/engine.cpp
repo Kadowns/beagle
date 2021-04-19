@@ -160,8 +160,15 @@ void beagle::Engine::init() {
 }
 
 void beagle::Engine::step() {
+    const float targetDt = 0.01f;
     m_timer.update();
+    float dt = m_timer.delta_time();
     m_jobSystem.execute();
+
+    if (dt < targetDt){
+        int64_t sleepForMs = (targetDt - dt) * 1000;
+        std::this_thread::sleep_for(std::chrono::milliseconds(sleepForMs));
+    }
 }
 
 void beagle::Engine::destroy() {
