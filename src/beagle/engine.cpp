@@ -9,10 +9,6 @@
 
 namespace beagle {
 
-struct Rigidbody {
-
-};
-
 void beagle::Engine::init() {
 
     EG_LOG_PATTERN("[%T.%e] [%n] [%^%l%$] [%s:%#::%!()] %v");
@@ -65,7 +61,6 @@ void beagle::Engine::init() {
     m_oscilatorGroup.attach(&m_entityManager);
     m_scalerGroup.attach(&m_entityManager);
 
-    EG_INFO("beagle", "scaler group size {0}", m_scalerGroup.size());
     m_timer.start();
 
     auto oscilatorJob = m_jobSystem.add_job([this]{
