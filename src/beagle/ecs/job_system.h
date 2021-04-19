@@ -68,11 +68,8 @@ public:
     ~JobSystem();
 
     size_t add_job(std::function<void()>&& task);
-
     void add_dependency(size_t jobId, size_t dependencyId);
-
     void execute();
-
 
 private:
     friend Worker;
@@ -84,13 +81,11 @@ private:
     size_t next_job();
 
 private:
+    JobGraph m_jobGraph;
     std::mutex m_queueMutex;
     std::condition_variable m_awakeWorker;
     std::vector<std::shared_ptr<Worker>> m_workers;
-    JobGraph m_jobGraph;
     std::queue<size_t> m_availableJobs;
-
-
 };
 
 }
