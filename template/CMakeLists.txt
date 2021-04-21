@@ -5,7 +5,7 @@ set(CMAKE_CXX_STANDARD 17)
 add_subdirectory(../ ${CMAKE_BINARY_DIR}/beagle)
 
 set(APP_SOURCES
-        src/template/template_app.cpp
+        src/template/template_game.cpp
         )
 
 add_library(${APP_NAME_LIB} STATIC ${APP_SOURCES})

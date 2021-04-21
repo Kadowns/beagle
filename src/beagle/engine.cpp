@@ -9,6 +9,10 @@
 
 namespace beagle {
 
+Engine::Engine(Game* game) : m_game(game){
+
+}
+
 void beagle::Engine::init() {
 
     EG_LOG_PATTERN("[%T.%e] [%n] [%^%l%$] [%s:%#::%!()] %v");
@@ -40,50 +44,9 @@ void beagle::Engine::init() {
 
     m_shader = context->create_shader(shaderCreateInfo);
 
-    auto e = m_entityManager.create();
-    e.assign<Transform>(glm::vec3(0, 0, 0));
-    e.assign<Scaler>();
-
-    e = m_entityManager.create();
-    auto tr = e.assign<Transform>(glm::vec3(-0.5, 0.5, 0));
-    auto osc = e.assign<Oscilator>();
-    e.assign<Scaler>();
-    osc->anchor = tr->position;
-
-    e = m_entityManager.create();
-    tr = e.assign<Transform>(glm::vec3(0.5, -0.5, 0));
-    osc = e.assign<Oscilator>();
-    osc->frequency = -1;
-    osc->anchor = tr->position;
-
-
-    m_quadsGroup.attach(&m_entityManager);
-    m_oscilatorGroup.attach(&m_entityManager);
-    m_scalerGroup.attach(&m_entityManager);
-
     m_timer.start();
 
-    auto oscilatorJob = m_jobSystem.add_job([this]{
-        float t = m_timer.time();
-
-        for (auto[tr, osc] : m_oscilatorGroup){
-            tr->position.x = osc->anchor.x + sinf(t * osc->frequency) * osc->amplitude;
-        }
-    });
-
-    auto scalerJob = m_jobSystem.add_job([this]{
-        float t = m_timer.time();
-
-        for (auto[tr, osc] : m_scalerGroup){
-            auto amplitude = osc->amplitude;
-            auto frequency = osc->frequency;
-            auto scale = tr->scale;
-            scale = glm::vec3(1) * (sinf(frequency * t) * amplitude);
-            tr->scale = scale;
-        }
-    });
-
-    auto quadJob = m_jobSystem.add_job([this]{
+    m_quadJobId = m_jobSystem.add_job([this]{
 
         struct Vertex {
             glm::vec3 position;
@@ -131,10 +94,8 @@ void beagle::Engine::init() {
         vb->upload();
         ib->upload();
     });
-    m_jobSystem.add_dependency(quadJob, oscilatorJob);
-    m_jobSystem.add_dependency(quadJob, scalerJob);
 
-    auto renderJob = m_jobSystem.add_job([this]{
+    m_renderJobId = m_jobSystem.add_job([this]{
         auto context = eagle::Application::instance().window().rendering_context();
         if (!context->prepare_frame()){
             return;
@@ -151,7 +112,11 @@ void beagle::Engine::init() {
 
         context->present_frame(commandBuffer);
     });
-    m_jobSystem.add_dependency(renderJob, quadJob);
+    m_jobSystem.add_dependency(m_renderJobId, m_quadJobId);
+
+    m_quadsGroup.attach(&m_entityManager);
+
+    m_game->init(this);
 }
 
 void beagle::Engine::step() {
@@ -159,6 +124,7 @@ void beagle::Engine::step() {
     m_timer.update();
     float dt = m_timer.delta_time();
     m_jobSystem.execute();
+    m_game->step(this);
 
     if (dt < targetDt){
         int64_t sleepForMs = (targetDt - dt) * 1000;
@@ -167,6 +133,7 @@ void beagle::Engine::step() {
 }
 
 void beagle::Engine::destroy() {
+    m_game->destroy(this);
     m_listener.detach();
 }
 

@@ -5,6 +5,8 @@
 #ifndef BEAGLE_ENGINE_H
 #define BEAGLE_ENGINE_H
 
+#include <beagle/beagle_global_definitions.h>
+#include <beagle/game.h>
 #include <beagle/ecs/entity.h>
 #include <beagle/ecs/job_system.h>
 #include <beagle/ecs/components/transform.h>
@@ -18,20 +20,10 @@
 
 namespace beagle {
 
-struct Oscilator {
-    float amplitude = 1.0f;
-    float frequency = 1.0f;
-    glm::vec3 anchor;
-};
-
-struct Scaler {
-    float amplitude = 1.0f;
-    float frequency = 1.0f;
-    glm::vec3 anchor;
-};
-
 class Engine : public eagle::ApplicationDelegate {
 public:
+
+    explicit Engine(Game* game);
 
     void init() override;
 
@@ -41,6 +33,13 @@ public:
 
     bool receive(const eagle::OnWindowClose& ev);
 
+    inline EntityManager& entities() { return m_entityManager; }
+    inline JobSystem& jobs() { return m_jobSystem; }
+    inline eagle::Timer& timer() { return m_timer; }
+
+    inline size_t quad_job_id() const { return m_quadJobId; }
+    inline size_t render_job_id() const { return m_renderJobId; }
+
 private:
     eagle::EventListener m_listener;
     eagle::Timer m_timer;
@@ -49,14 +48,14 @@ private:
     std::weak_ptr<eagle::IndexBuffer> m_indexBuffer;
     std::weak_ptr<eagle::Shader> m_shader;
 
-
-
     EntityManager m_entityManager;
     EntityGroup<Transform> m_quadsGroup;
-    EntityGroup<Transform, Oscilator> m_oscilatorGroup;
-    EntityGroup<Transform, Scaler> m_scalerGroup;
 
     JobSystem m_jobSystem;
+    std::unique_ptr<Game> m_game;
+
+    size_t m_quadJobId{};
+    size_t m_renderJobId{};
 
 };
 

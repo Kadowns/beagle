@@ -5,6 +5,8 @@
 #ifndef BEAGLE_BEAGLE_GLOBAL_DEFINITIONS_H
 #define BEAGLE_BEAGLE_GLOBAL_DEFINITIONS_H
 
+#include <eagle/core_global_definitions.h>
+
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include <glm/glm.hpp>
