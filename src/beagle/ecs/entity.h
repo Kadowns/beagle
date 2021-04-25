@@ -65,6 +65,9 @@ public:
     std::tuple<Component<Components>...> components();
 
     template<typename T>
+    bool has_component();
+
+    template<typename T>
     void remove();
 
     void destroy();
@@ -140,15 +143,16 @@ private:
 template<typename T>
 class Component {
 public:
+    Component() : m_owner(), m_data(nullptr) {}
     Component(Entity owner, T* data) : m_owner(owner), m_data(data) {}
 
     T* operator->() { return m_data; }
     const T* operator->() const { return m_data; }
 
     Entity owner() { return m_owner; }
-    const Entity owner() const { return m_owner; }
+    Entity owner() const { return m_owner; }
 
-    bool valid() const { return m_owner.valid(); }
+    bool valid() const { return m_owner.valid() && m_data != nullptr; }
 
 private:
     Entity m_owner;
@@ -318,7 +322,7 @@ public:
     }
 
     template<typename T>
-    inline uint32_t component_family(){
+    inline uint32_t component_family() {
         return ComponentHelper<typename std::remove_reference<T>::type>::family();
     }
 
@@ -351,6 +355,11 @@ public:
 
     inline const ComponentMask& component_mask(Entity::Id entity) const {
         return m_entityComponentMask[entity.index()];
+    }
+
+    template<typename T>
+    inline bool entity_has_component(Entity::Id entity) {
+        return m_entityComponentMask[entity.index()].test(component_family<T>());
     }
 
     View all(){
@@ -523,6 +532,11 @@ Component<T> Entity::component() {
 template<typename... Components>
 std::tuple<Component<Components>...> Entity::components() {
     return m_manager->components_from_entity<Components...>(m_id);
+}
+
+template<typename T>
+bool Entity::has_component() {
+    return m_manager->entity_has_component<T>(m_id);
 }
 
 }
