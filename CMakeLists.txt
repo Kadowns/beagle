@@ -8,7 +8,8 @@ set(BEAGLE_SOURCES
         src/beagle/engine.cpp
         src/beagle/ecs/entity.cpp
         src/beagle/ecs/job_system.cpp
-        src/beagle/ecs/system/transform_system.cpp
+        src/beagle/ecs/systems/transform_system.cpp
+        src/beagle/ecs/systems/camera_system.cpp
         )
 
 
