@@ -37,25 +37,15 @@ public:
     inline JobSystem& jobs() { return m_jobSystem; }
     inline eagle::Timer& timer() { return m_timer; }
 
-    inline size_t quad_job_id() const { return m_quadJobId; }
-    inline size_t render_job_id() const { return m_renderJobId; }
-
 private:
     eagle::EventListener m_listener;
     eagle::Timer m_timer;
-    std::weak_ptr<eagle::CommandBuffer> m_commandBuffer;
-    std::weak_ptr<eagle::VertexBuffer> m_vertexBuffer;
-    std::weak_ptr<eagle::IndexBuffer> m_indexBuffer;
-    std::weak_ptr<eagle::Shader> m_shader;
+
 
     EntityManager m_entityManager;
-    EntityGroup<Transform> m_quadsGroup;
 
     JobSystem m_jobSystem;
     std::unique_ptr<Game> m_game;
-
-    size_t m_quadJobId{};
-    size_t m_renderJobId{};
 
 };
 
