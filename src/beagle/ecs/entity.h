@@ -241,6 +241,8 @@ public:
         reset();
     }
 
+    inline eagle::EventBus& event_bus() { return m_eventBus; }
+
     void reset(){
         for (uint32_t i = 0; i < m_entityComponentMask.size(); i++) {
             Entity::Id id = Entity::Id(i, m_entityVersions[i]);
