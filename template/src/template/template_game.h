@@ -39,6 +39,7 @@ private:
     std::weak_ptr<eagle::VertexBuffer> m_vertexBuffer;
     std::weak_ptr<eagle::IndexBuffer> m_indexBuffer;
     std::weak_ptr<eagle::Shader> m_shader;
+    std::weak_ptr<eagle::DescriptorSet> m_descriptorSet;
 
     beagle::EntityGroup<beagle::Transform> m_quadsGroup;
     beagle::EntityGroup<beagle::Position, Oscilator> m_oscilatorGroup;
