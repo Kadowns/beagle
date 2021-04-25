@@ -5,7 +5,7 @@
 #ifndef BEAGLE_TRANSFORM_H
 #define BEAGLE_TRANSFORM_H
 
-#include <beagle/beagle_global_definitions.h>
+#include <beagle/math.h>
 
 namespace beagle {
 
