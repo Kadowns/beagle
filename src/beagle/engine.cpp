@@ -28,16 +28,10 @@ void Engine::init() {
 }
 
 void Engine::step() {
-    const float targetDt = 0.01f;
     m_timer.update();
-    float dt = m_timer.delta_time();
     m_game->step(this);
     m_jobSystem.execute();
-
-    if (dt < targetDt){
-        int64_t sleepForMs = (targetDt - dt) * 1000;
-        std::this_thread::sleep_for(std::chrono::milliseconds(sleepForMs));
-    }
+    wait_for_target_fps(m_timer.delta_time());
 }
 
 void Engine::destroy() {
@@ -48,6 +42,14 @@ void Engine::destroy() {
 bool Engine::receive(const eagle::OnWindowClose& ev) {
     eagle::Application::instance().quit();
     return false;
+}
+
+void Engine::wait_for_target_fps(float dt) {
+    const float targetDt = 0.01f;
+    if (dt < targetDt){
+        int64_t sleepForMs = (targetDt - dt) * 1000;
+        std::this_thread::sleep_for(std::chrono::milliseconds(sleepForMs));
+    }
 }
 
 }

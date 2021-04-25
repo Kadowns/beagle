@@ -38,6 +38,10 @@ public:
     inline eagle::Timer& timer() { return m_timer; }
 
 private:
+
+    void wait_for_target_fps(float dt);
+
+private:
     eagle::EventListener m_listener;
     eagle::Timer m_timer;
 
