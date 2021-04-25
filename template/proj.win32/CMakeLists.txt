@@ -13,7 +13,7 @@ target_link_libraries(${APP_NAME_EXE} PRIVATE ${APP_NAME_LIB})
 add_custom_target(
         copy_assets_folder
         COMMENT "Copying assets folder"
-        COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/../assets/ ${CMAKE_CURRENT_BINARY_DIR}/assets/
+        COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/../assets/ ${CMAKE_CURRENT_BINARY_DIR}/
 )
 
 add_dependencies(copy_assets_folder ${APP_NAME_LIB})
