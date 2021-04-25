@@ -9,23 +9,33 @@
 
 namespace beagle {
 
-struct Transform {
-    Transform(
-            const glm::vec3& position = glm::vec3(0),
-            const glm::vec3& rotation = glm::vec3(0),
-            const glm::vec3& scale = glm::vec3(1)) :
-            position(position), rotation(rotation), scale(scale) {}
-
-    inline glm::vec3 front()    const { return rotation * glm::vec3(0.0f, 0.0f, -1.0f); }
-    inline glm::vec3 up()       const { return rotation * glm::vec3(0.0f, 1.0f, 0.0f);  }
-    inline glm::vec3 right()    const { return rotation * glm::vec3(1.0f, 0.0f, 0.0f);  }
-    inline glm::mat4 matrix()   const { return glm::scale(glm::translate(glm::mat4(1), position) * glm::mat4_cast(rotation), scale);}
-
+struct Position {
+    Position() : position(0) {}
+    explicit Position(const glm::vec3& position) : position(position) {}
+    Position(float x, float y, float z) : position(x, y, z) {}
     glm::vec3 position;
-    glm::quat rotation;
-    glm::vec3 scale;
-
 };
+
+struct Rotation {
+    Rotation() : rotation(glm::vec3(0)) {}
+    explicit Rotation(const glm::vec3& rotation) : rotation(rotation) {}
+    Rotation(float x, float y, float z) : rotation(glm::vec3(x, y, z)) {}
+    Rotation(float x, float y, float z, float w) : rotation(x, y, z, w) {}
+    glm::quat rotation;
+};
+
+struct Scale {
+    Scale() : scale(1) {}
+    explicit Scale(const glm::vec3& scale) : scale(scale) {}
+    Scale(float x, float y, float z) : scale(x, y, z) {}
+    glm::vec3 scale;
+};
+
+struct Transform {
+    glm::mat4 matrix;
+    glm::mat4 inverseMatrix;
+};
+
 
 }
 
