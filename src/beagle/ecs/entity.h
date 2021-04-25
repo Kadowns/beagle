@@ -14,7 +14,7 @@
 
 #include <beagle/beagle_global_definitions.h>
 
-#define MAX_COMPONENTS 32
+#define MAX_COMPONENTS 256
 
 using ComponentMask = std::bitset<MAX_COMPONENTS>;
 
