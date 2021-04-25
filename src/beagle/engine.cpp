@@ -31,7 +31,7 @@ void Engine::step() {
     m_timer.update();
     m_game->step(this);
     m_jobSystem.execute();
-    wait_for_target_fps(m_timer.delta_time());
+//    wait_for_target_fps(m_timer.delta_time());
 }
 
 void Engine::destroy() {
