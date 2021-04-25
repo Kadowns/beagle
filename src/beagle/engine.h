@@ -32,6 +32,7 @@ public:
     void destroy() override;
 
     bool receive(const eagle::OnWindowClose& ev);
+    bool receive(const eagle::OnWindowResized& ev);
 
     inline EntityManager& entities() { return m_entityManager; }
     inline JobSystem& jobs() { return m_jobSystem; }

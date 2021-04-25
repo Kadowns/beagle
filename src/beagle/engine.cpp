@@ -21,6 +21,7 @@ void Engine::init() {
 
     m_listener.attach(&eagle::Application::instance().event_bus());
     m_listener.receive<eagle::OnWindowClose>(this);
+    m_listener.receive<eagle::OnWindowResized>(this);
 
     m_timer.start();
 
@@ -44,12 +45,19 @@ bool Engine::receive(const eagle::OnWindowClose& ev) {
     return false;
 }
 
+bool Engine::receive(const eagle::OnWindowResized& ev) {
+    m_entityManager.event_bus().emit(ev);
+    return false;
+}
+
 void Engine::wait_for_target_fps(float dt) {
-    const float targetDt = 0.01f;
+    const float targetDt = 0.032f;
     if (dt < targetDt){
         int64_t sleepForMs = (targetDt - dt) * 1000;
         std::this_thread::sleep_for(std::chrono::milliseconds(sleepForMs));
     }
 }
+
+
 
 }
