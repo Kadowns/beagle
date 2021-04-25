@@ -19,6 +19,10 @@ struct Scaler {
     glm::vec3 anchor;
 };
 
+struct Rotator {
+    float frequency = 1.0f;
+};
+
 class TemplateGame : public beagle::Game {
 public:
     TemplateGame();
@@ -31,8 +35,15 @@ public:
     void destroy(beagle::Engine* engine) override;
 private:
 
-    beagle::EntityGroup<beagle::Transform, Oscilator> m_oscilatorGroup;
-    beagle::EntityGroup<beagle::Transform, Scaler> m_scalerGroup;
+    std::weak_ptr<eagle::CommandBuffer> m_commandBuffer;
+    std::weak_ptr<eagle::VertexBuffer> m_vertexBuffer;
+    std::weak_ptr<eagle::IndexBuffer> m_indexBuffer;
+    std::weak_ptr<eagle::Shader> m_shader;
+
+    beagle::EntityGroup<beagle::Transform> m_quadsGroup;
+    beagle::EntityGroup<beagle::Position, Oscilator> m_oscilatorGroup;
+    beagle::EntityGroup<beagle::Scale, Scaler> m_scalerGroup;
+    beagle::EntityGroup<beagle::Rotation, Rotator> m_rotatorGroup;
 };
 
 

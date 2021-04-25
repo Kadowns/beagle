@@ -2,6 +2,11 @@
 // Created by Ricardo on 4/21/2021.
 //
 
+#include <eagle/application.h>
+#include <eagle/window.h>
+#include <eagle/renderer/rendering_context.h>
+
+#include <beagle/ecs/system/transform_system.h>
 #include "template_game.h"
 
 TemplateGame::TemplateGame() {
@@ -11,33 +16,70 @@ TemplateGame::TemplateGame() {
 void TemplateGame::init(beagle::Engine* engine) {
     EG_TRACE("template", "init called");
 
-    EG_DEBUG("template", "Components family id Transform: {0}, Scaler: {1}, Oscilator:{2}",
-             beagle::ComponentHelper<beagle::Transform>::family(),
-             beagle::ComponentHelper<Scaler>::family(),
-             beagle::ComponentHelper<Oscilator>::family()
-             );
+    auto context = eagle::Application::instance().window().rendering_context();
+
+    eagle::CommandBufferCreateInfo commandBufferCreateInfo = {};
+    commandBufferCreateInfo.level = eagle::CommandBufferLevel::MASTER;
+
+    m_commandBuffer = context->create_command_buffer(commandBufferCreateInfo);
+
+    m_vertexBuffer = context->create_vertex_buffer({eagle::UpdateType::DYNAMIC});
+    m_indexBuffer = context->create_index_buffer({eagle::UpdateType::DYNAMIC, eagle::IndexBufferType::UINT_16});
+
+    eagle::ShaderCreateInfo shaderCreateInfo = {
+            context->main_render_pass(),
+            {
+                    {eagle::ShaderStage::FRAGMENT, "shaders/color.frag.spv"},
+                    {eagle::ShaderStage::VERTEX, "shaders/color.vert.spv"},
+            }
+    };
+    shaderCreateInfo.vertexLayout.add(0, eagle::Format::R32G32B32_SFLOAT);
+    shaderCreateInfo.vertexLayout.add(0, eagle::Format::R32G32B32A32_SFLOAT);
+
+    m_shader = context->create_shader(shaderCreateInfo);
 
     auto e = engine->entities().create();
-    e.assign<beagle::Transform>(glm::vec3(0, 0, 0));
+    e.assign<beagle::Position>(0.5, -0.5, 0);
+    e.assign<beagle::Rotation>();
+    e.assign<beagle::Scale>();
+    e.assign<Rotator>();
+    e.assign<beagle::Transform>();
     e.assign<Scaler>();
 
     e = engine->entities().create();
-    auto tr = e.assign<beagle::Transform>(glm::vec3(-0.5, 0.5, 0));
+    auto pos = e.assign<beagle::Position>(-0.5, 0.5, 0);
+    e.assign<beagle::Scale>(0.5, 0.5, 0);
     auto osc = e.assign<Oscilator>();
+    e.assign<beagle::Rotation>();
+    e.assign<Rotator>();
+    e.assign<beagle::Transform>();
     e.assign<Scaler>();
-    osc->anchor = tr->position;
+    osc->anchor = pos->position;
 
     e = engine->entities().create();
-    tr = e.assign<beagle::Transform>(glm::vec3(0.5, -0.5, 0));
+    pos = e.assign<beagle::Position>();
+    e.assign<beagle::Scale>();
+    e.assign<beagle::Rotation>();
+    e.assign<Rotator>();
+    e.assign<beagle::Transform>();
     osc = e.assign<Oscilator>();
     osc->frequency = -1;
-    osc->anchor = tr->position;
+    osc->anchor = pos->position;
 
     m_oscilatorGroup.attach(&engine->entities());
     m_scalerGroup.attach(&engine->entities());
+    m_rotatorGroup.attach(&engine->entities());
+    m_quadsGroup.attach(&engine->entities());
 
+    auto rotatorJob = engine->jobs().enqueue<beagle::Job>([this, engine]{
+        float t = engine->timer().time();
+        for (auto[rotation, rotator] : m_rotatorGroup){
+            rotation->rotation *= glm::quat(glm::vec3(0, 0, glm::radians(t * rotator->frequency)));
+            glm::normalize(rotation->rotation);
+        }
+    });
 
-    auto oscilatorJob = engine->jobs().add_job([this, engine]{
+    auto oscilatorJob = engine->jobs().enqueue<beagle::Job>([this, engine]{
         float t = engine->timer().time();
 
         for (auto[tr, osc] : m_oscilatorGroup){
@@ -45,7 +87,7 @@ void TemplateGame::init(beagle::Engine* engine) {
         }
     });
 
-    auto scalerJob = engine->jobs().add_job([this, engine]{
+    auto scalerJob = engine->jobs().enqueue<beagle::Job>([this, engine]{
         float t = engine->timer().time();
 
         for (auto[tr, osc] : m_scalerGroup){
@@ -57,12 +99,82 @@ void TemplateGame::init(beagle::Engine* engine) {
         }
     });
 
-    engine->jobs().add_dependency(engine->quad_job_id(), oscilatorJob);
-    engine->jobs().add_dependency(engine->quad_job_id(), scalerJob);
+    auto transformJob = engine->jobs().enqueue<beagle::TransformSystem>(&engine->entities());
+    transformJob.run_after(scalerJob);
+    transformJob.run_after(oscilatorJob);
+    transformJob.run_after(rotatorJob);
+
+    auto quadJob = engine->jobs().enqueue<beagle::Job>([this]{
+
+        struct Vertex {
+            glm::vec3 position;
+            glm::vec4 color;
+        };
+
+        struct Quad {
+            Vertex vertices[4];
+        };
+
+        auto vb = m_vertexBuffer.lock();
+        auto ib = m_indexBuffer.lock();
+        vb->reserve(m_quadsGroup.size() * sizeof(Quad));
+        vb->clear();
+        ib->reserve(m_quadsGroup.size() * sizeof(uint16_t) * 6);
+        ib->clear();
+        int index = 0;
+        for (auto[t] : m_quadsGroup){
+
+            auto matrix = t->matrix;
+
+            Quad quad = {{
+                                 {matrix * glm::vec4(-0.1, -0.1, 0.0f, 1.0f), glm::vec4(0.5f, 1.0f, 0.5f, 1.0f)},
+                                 {matrix * glm::vec4(0.1, -0.1, 0.0f, 1.0f), glm::vec4(1.0f, 1.0f, 0.5f, 1.0f)},
+                                 {matrix * glm::vec4(-0.1, 0.1, 0.0f, 1.0f), glm::vec4(0.5f, 1.0f, 1.0f, 1.0f)},
+                                 {matrix * glm::vec4(0.1, 0.1, 0.0f, 1.0f), glm::vec4(0.5f, 0.5f, 1.0f, 1.0f)},
+                         }
+            };
+
+            uint16_t indices[6] = {
+                    0, 1, 2, 1, 3, 2
+            };
+            indices[0] += index * 4;
+            indices[1] += index * 4;
+            indices[2] += index * 4;
+            indices[3] += index * 4;
+            indices[4] += index * 4;
+            indices[5] += index * 4;
+
+            vb->insert(&quad, sizeof(Quad));
+            ib->insert(indices, sizeof(uint16_t) * 6);
+            index++;
+        }
+        vb->upload();
+        ib->upload();
+    });
+    quadJob.run_after(transformJob);
+
+    auto renderJob = engine->jobs().enqueue<beagle::Job>([this]{
+        auto context = eagle::Application::instance().window().rendering_context();
+        if (!context->prepare_frame()){
+            return;
+        }
+        auto commandBuffer = m_commandBuffer.lock();
+        commandBuffer->begin();
+        commandBuffer->begin_render_pass(context->main_render_pass(), context->main_frambuffer());
+        commandBuffer->bind_shader(m_shader.lock());
+        commandBuffer->bind_vertex_buffer(m_vertexBuffer.lock());
+        commandBuffer->bind_index_buffer(m_indexBuffer.lock());
+        commandBuffer->draw_indexed(m_quadsGroup.size() * 6, 0, 0);
+        commandBuffer->end_render_pass();
+        commandBuffer->end();
+
+        context->present_frame(commandBuffer);
+    });
+    renderJob.run_after(quadJob);
 }
 
 void TemplateGame::step(beagle::Engine* engine) {
-    EG_TRACE("template", "step called");
+
 }
 
 void TemplateGame::destroy(beagle::Engine* engine) {
