@@ -78,6 +78,37 @@ bool CameraOrthographicSystem::receive(const eagle::OnWindowResized& ev) {
     return false;
 }
 
+CameraPerspectiveSystem::CameraPerspectiveSystem(EntityManager* entities, float width, float height) {
+    m_eventBus = &entities->event_bus();
+    m_width = width;
+    m_height = height;
+    m_listener.attach(m_eventBus);
+    m_listener.receive<eagle::OnWindowResized>(this);
+    m_cameraGroup.attach(entities);
+}
+
+void CameraPerspectiveSystem::execute() {
+    if (!m_windowResized){
+        return;
+    }
+    m_windowResized = false;
+
+    for (auto[projection, perspective] : m_cameraGroup){
+        perspective->aspectRatio = m_width / m_height;
+        projection->matrix = glm::perspective(perspective->fov, perspective->aspectRatio, perspective->near, perspective->far);
+        projection->matrix[1][1] *= -1;
+        m_eventBus->emit(OnCameraUpdate{projection.owner().id()});
+    }
+}
+
+bool CameraPerspectiveSystem::receive(const eagle::OnWindowResized& ev) {
+    m_windowResized = true;
+    m_width = ev.width;
+    m_height = ev.height;
+    return false;
+}
+
+
 CameraViewSystem::CameraViewSystem(EntityManager* manager) {
     m_manager = manager;
     m_eventBus = &manager->event_bus();

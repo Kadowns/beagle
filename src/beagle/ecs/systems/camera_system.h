@@ -44,9 +44,24 @@ private:
     bool m_windowResized = true;
 };
 
+class CameraPerspectiveSystem : public BaseJob {
+public:
+    CameraPerspectiveSystem(EntityManager* entities, float width, float height);
+    void execute() override;
+
+    bool receive(const eagle::OnWindowResized& ev);
+
+private:
+    eagle::EventListener m_listener;
+    eagle::EventBus* m_eventBus;
+    EntityGroup<CameraProjection, CameraPerspectiveProjection> m_cameraGroup;
+    float m_width, m_height;
+    bool m_windowResized = true;
+};
+
 class CameraViewSystem : public BaseJob {
 public:
-    CameraViewSystem(EntityManager* manager);
+    explicit CameraViewSystem(EntityManager* manager);
     void execute() override;
 
     bool receive(const OnCameraTransformed& ev);
