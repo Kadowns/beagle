@@ -22,17 +22,15 @@ void Engine::init() {
     m_listener.attach(&eagle::Application::instance().event_bus());
     m_listener.receive<eagle::OnWindowClose>(this);
     m_listener.receive<eagle::OnWindowResized>(this);
-
-    m_timer.start();
-
     m_game->init(this);
+    m_timer.start();
 }
 
 void Engine::step() {
     m_timer.update();
     m_game->step(this);
     m_jobSystem.execute();
-//    wait_for_target_fps(m_timer.delta_time());
+    wait_for_target_fps(m_timer.delta_time());
 }
 
 void Engine::destroy() {
@@ -51,13 +49,11 @@ bool Engine::receive(const eagle::OnWindowResized& ev) {
 }
 
 void Engine::wait_for_target_fps(float dt) {
-    const float targetDt = 0.032f;
+    const float targetDt = 0.008f;
     if (dt < targetDt){
         int64_t sleepForMs = (targetDt - dt) * 1000;
         std::this_thread::sleep_for(std::chrono::milliseconds(sleepForMs));
     }
 }
-
-
 
 }
