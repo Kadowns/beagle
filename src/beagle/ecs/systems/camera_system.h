@@ -16,7 +16,7 @@ namespace beagle {
 
 class CameraUploadSystem : public BaseJob {
 public:
-    CameraUploadSystem(EntityManager* entities);
+    explicit CameraUploadSystem(EntityManager* entities);
     void execute() override;
 
     bool receive(const OnCameraUpdate& ev);
@@ -27,7 +27,6 @@ private:
     std::set<Entity::Id> m_dirtyCameras;
 
 };
-
 
 class CameraOrthographicSystem : public BaseJob {
 public:
