@@ -20,7 +20,7 @@ struct Scaler {
 };
 
 struct Rotator {
-    float frequency = 1.0f;
+    glm::vec3 frequency;
 };
 
 class TemplateGame : public beagle::Game {
@@ -37,6 +37,7 @@ private:
 
     std::weak_ptr<eagle::CommandBuffer> m_commandBuffer;
     std::weak_ptr<eagle::VertexBuffer> m_vertexBuffer;
+    std::weak_ptr<eagle::VertexBuffer> m_instanceVertexBuffer;
     std::weak_ptr<eagle::IndexBuffer> m_indexBuffer;
     std::weak_ptr<eagle::Shader> m_shader;
     std::weak_ptr<eagle::DescriptorSet> m_descriptorSet;

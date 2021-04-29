@@ -25,8 +25,68 @@ void TemplateGame::init(beagle::Engine* engine) {
 
     m_commandBuffer = context->create_command_buffer(commandBufferCreateInfo);
 
-    m_vertexBuffer = context->create_vertex_buffer({eagle::UpdateType::DYNAMIC});
-    m_indexBuffer = context->create_index_buffer({eagle::UpdateType::DYNAMIC, eagle::IndexBufferType::UINT_16});
+    struct Vertex {
+        glm::vec3 position;
+        glm::vec4 color;
+    };
+
+    struct Cube {
+        Vertex vertices[24];
+    };
+
+    auto vb = m_vertexBuffer.lock();
+    auto ib = m_indexBuffer.lock();
+
+    Cube cube = {{
+                         //up
+                         {glm::vec4(-1.0f, -1.0f, -1.0f, 1.0f), glm::vec4(1.0f, 1.0f, 0.5f, 1.0f)},
+                         {glm::vec4(-1.0f, -1.0f, 1.0f, 1.0f), glm::vec4(1.0f, 1.0f, 0.5f, 1.0f)},
+                         {glm::vec4(1.0f, -1.0f, 1.0f, 1.0f), glm::vec4(1.0f, 1.0f, 0.5f, 1.0f)},
+                         {glm::vec4(1.0f, -1.0f, -1.0f, 1.0f), glm::vec4(1.0f, 1.0f, 0.5f, 1.0f)},
+
+                         //down
+                         {glm::vec4(-1.0f, 1.0f, -1.0f, 1.0f), glm::vec4(1.0f, 0.5f, 1.0f, 1.0f)},
+                         {glm::vec4(-1.0f, 1.0f, 1.0f, 1.0f), glm::vec4(1.0f, 0.5f, 1.0f, 1.0f)},
+                         {glm::vec4(1.0f, 1.0f, 1.0f, 1.0f), glm::vec4(1.0f, 0.5f, 1.0f, 1.0f)},
+                         {glm::vec4(1.0f, 1.0f, -1.0f, 1.0f), glm::vec4(1.0f, 0.5f, 1.0f, 1.0f)},
+
+                         //left
+                         {glm::vec4(-1.0f, -1.0f, -1.0f, 1.0f), glm::vec4(0.0f, 1.0f, 1.0f, 1.0f)},
+                         {glm::vec4(-1.0f, -1.0f, 1.0f, 1.0f), glm::vec4(0.0f, 1.0f, 1.0f, 1.0f)},
+                         {glm::vec4(-1.0f, 1.0f, 1.0f, 1.0f), glm::vec4(0.0f, 1.0f, 1.0f, 1.0f)},
+                         {glm::vec4(-1.0f, 1.0f, -1.0f, 1.0f), glm::vec4(0.0f, 1.0f, 1.0f, 1.0f)},
+
+                         //right
+                         {glm::vec4(1.0f, -1.0f, -1.0f, 1.0f), glm::vec4(1.0f, 0.0f, 0.5f, 1.0f)},
+                         {glm::vec4(1.0f, -1.0f, 1.0f, 1.0f), glm::vec4(1.0f, 0.0f, 0.5f, 1.0f)},
+                         {glm::vec4(1.0f, 1.0f, 1.0f, 1.0f), glm::vec4(1.0f, 0.0f, 0.5f, 1.0f)},
+                         {glm::vec4(1.0f, 1.0f, -1.0f, 1.0f), glm::vec4(1.0f, 0.0f, 0.5f, 1.0f)},
+
+                         //front
+                         {glm::vec4(-1.0f, -1.0f, 1.0f, 1.0f), glm::vec4(0.0f, 1.0f, 0.5f, 1.0f)},
+                         {glm::vec4(-1.0f, 1.0f, 1.0f, 1.0f), glm::vec4(0.0f, 1.0f, 0.5f, 1.0f)},
+                         {glm::vec4(1.0f, 1.0f, 1.0f, 1.0f), glm::vec4(0.0f, 1.0f, 0.5f, 1.0f)},
+                         {glm::vec4(1.0f, -1.0f, 1.0f, 1.0f), glm::vec4(0.0f, 1.0f, 0.5f, 1.0f)},
+
+                         //back
+                         {glm::vec4(-1.0f, -1.0f, -1.0f, 1.0f), glm::vec4(1.0f, 0.6f, 0.5f, 1.0f)},
+                         {glm::vec4(-1.0f, 1.0f, -1.0f, 1.0f), glm::vec4(1.0f, 0.6f, 0.5f, 1.0f)},
+                         {glm::vec4(1.0f, 1.0f, -1.0f, 1.0f), glm::vec4(1.0f, 0.6f, 0.5f, 1.0f)},
+                         {glm::vec4(1.0f, -1.0f, -1.0f, 1.0f), glm::vec4(1.0f, 0.6f, 0.5f, 1.0f)},
+                 }};
+
+    uint16_t indices[36] = {
+            0, 3, 2, 0, 2, 1, //up
+            4, 5, 6, 4, 6, 7, //down
+            8, 9, 10, 8, 10, 11, //left
+            12, 14, 13, 12, 15, 14, //right
+            16, 18, 17, 16, 19, 18, //front
+            20, 21, 22, 20, 22, 23, //down
+    };
+
+    m_vertexBuffer = context->create_vertex_buffer({eagle::UpdateType::BAKED, sizeof(Cube), &cube});
+    m_indexBuffer = context->create_index_buffer({eagle::UpdateType::BAKED, eagle::IndexBufferType::UINT_16, sizeof(uint16_t) * 36, indices});
+    m_instanceVertexBuffer = context->create_vertex_buffer({eagle::UpdateType::DYNAMIC});
 
     eagle::ShaderCreateInfo shaderCreateInfo = {
             context->main_render_pass(),
@@ -35,48 +95,61 @@ void TemplateGame::init(beagle::Engine* engine) {
                     {eagle::ShaderStage::VERTEX, "shaders/color.vert.spv"},
             }
     };
+    //position
     shaderCreateInfo.vertexLayout.add(0, eagle::Format::R32G32B32_SFLOAT);
+
+    //color
     shaderCreateInfo.vertexLayout.add(0, eagle::Format::R32G32B32A32_SFLOAT);
+
+    //transform matrix
+    //build a mat4 using 4 vec4
+    shaderCreateInfo.vertexLayout.add(1, eagle::Format::R32G32B32A32_SFLOAT);
+    shaderCreateInfo.vertexLayout.add(1, eagle::Format::R32G32B32A32_SFLOAT);
+    shaderCreateInfo.vertexLayout.add(1, eagle::Format::R32G32B32A32_SFLOAT);
+    shaderCreateInfo.vertexLayout.add(1, eagle::Format::R32G32B32A32_SFLOAT);
+    shaderCreateInfo.vertexLayout[1].inputRate = eagle::VertexInputRate::INSTANCE;
+    shaderCreateInfo.depthTesting = true;
 
     m_shader = context->create_shader(shaderCreateInfo);
 
     auto e = engine->entities().create();
-    e.assign<beagle::Position>(1000, 200, 0);
+    e.assign<beagle::Position>(1, -1, -1);
     e.assign<beagle::Rotation>();
-    e.assign<beagle::Scale>(2, 2, 2);
-    auto rot =e.assign<Rotator>();
-    rot->frequency = 90.0f;
+    e.assign<beagle::Scale>();
+    auto rot = e.assign<Rotator>();
+    rot->frequency = glm::vec3(30, 15, 7.);
     e.assign<beagle::Transform>();
 //    e.assign<Scaler>();
 
     e = engine->entities().create();
-    auto pos = e.assign<beagle::Position>(300, 500, 0);
-    e.assign<beagle::Scale>(1, 3, 1);
+    auto pos = e.assign<beagle::Position>(-1, 1, 2);
+    e.assign<beagle::Scale>();
     auto osc = e.assign<Oscilator>();
     e.assign<beagle::Rotation>();
     rot = e.assign<Rotator>();
-    rot->frequency = 60.0f;
+    rot->frequency = glm::vec3(60, 40, 20);
     e.assign<beagle::Transform>();
-//    e.assign<Scaler>();
+////    e.assign<Scaler>();
     osc->anchor = pos->position;
-    osc->amplitude = 400;
+    osc->amplitude = 4;
 
     e = engine->entities().create();
-    pos = e.assign<beagle::Position>(window.width() / 2, window.height() / 2, 0);
-    e.assign<beagle::Scale>(0.5, 1, 1);
+    pos = e.assign<beagle::Position>(-2, 0, 0);
+    e.assign<beagle::Scale>();
     e.assign<beagle::Rotation>();
     rot = e.assign<Rotator>();
-    rot->frequency = 30.0f;
+    rot->frequency = glm::vec3(90, 45, 22.5f);
     e.assign<beagle::Transform>();
     osc = e.assign<Oscilator>();
     osc->frequency = -1;
     osc->anchor = pos->position;
-    osc->amplitude = 120;
+    osc->amplitude = 2;
 
 
     e = engine->entities().create();
-    e.assign<beagle::Position>(0.0f, 0.0f, 10.0f);
-    e.assign<beagle::CameraOrthographicProjection>(0, window.width(), window.height(), 0, 0.1f, 100.0f);
+    e.assign<beagle::Position>(0.0f, 0.0f, 20.0f);
+//    e.assign<beagle::CameraOrthographicProjection>(0, 20, 12, 0, 0.1f, 100.0f);
+    e.assign<beagle::CameraPerspectiveProjection>(glm::radians(45.0f), window.width() / window.height(), 0.1f, 1000.0f);
     e.assign<beagle::CameraProjection>();
     e.assign<beagle::CameraView>();
     auto camera = e.assign<beagle::Camera>();
@@ -94,7 +167,7 @@ void TemplateGame::init(beagle::Engine* engine) {
     auto rotatorJob = engine->jobs().enqueue<beagle::Job>([this, engine]{
         float t = engine->timer().time();
         for (auto[rotation, rotator] : m_rotatorGroup){
-            rotation->rotation = glm::quat(glm::vec3(0, 0, glm::radians(t * rotator->frequency)));
+            rotation->rotation = glm::quat(glm::radians(t * rotator->frequency));
         }
     });
 
@@ -123,60 +196,24 @@ void TemplateGame::init(beagle::Engine* engine) {
     transformJob.run_after(oscilatorJob);
     transformJob.run_after(rotatorJob);
 
-    auto quadJob = engine->jobs().enqueue<beagle::Job>([this]{
-
-        struct Vertex {
-            glm::vec3 position;
-            glm::vec4 color;
-        };
-
-        struct Quad {
-            Vertex vertices[4];
-        };
-
-        auto vb = m_vertexBuffer.lock();
-        auto ib = m_indexBuffer.lock();
-        vb->reserve(m_quadsGroup.size() * sizeof(Quad));
-        vb->clear();
-        ib->reserve(m_quadsGroup.size() * sizeof(uint16_t) * 6);
-        ib->clear();
-        int index = 0;
+    auto instanceMatrixJob = engine->jobs().enqueue<beagle::Job>([this]{
+        auto ivb = m_instanceVertexBuffer.lock();
+        ivb->reserve(m_quadsGroup.size() * sizeof(glm::mat4));
+        ivb->clear();
         for (auto[t] : m_quadsGroup){
-
-            auto matrix = t->matrix;
-
-            Quad quad = {{
-                                 {matrix * glm::vec4(-50.0f, -50.0f, 0.0f, 1.0f), glm::vec4(0.5f, 1.0f, 0.5f, 1.0f)},
-                                 {matrix * glm::vec4(50.0f, -50.0f, 0.0f, 1.0f), glm::vec4(1.0f, 1.0f, 0.5f, 1.0f)},
-                                 {matrix * glm::vec4(-50.0f, 50.0f, 0.0f, 1.0f), glm::vec4(0.5f, 1.0f, 1.0f, 1.0f)},
-                                 {matrix * glm::vec4(50.0f, 50.0f, 0.0f, 1.0f), glm::vec4(0.5f, 0.5f, 1.0f, 1.0f)},
-                         }
-            };
-
-            uint16_t indices[6] = {
-                    0, 1, 2, 1, 3, 2
-            };
-            indices[0] += index * 4;
-            indices[1] += index * 4;
-            indices[2] += index * 4;
-            indices[3] += index * 4;
-            indices[4] += index * 4;
-            indices[5] += index * 4;
-
-            vb->insert(&quad, sizeof(Quad));
-            ib->insert(indices, sizeof(uint16_t) * 6);
-            index++;
+            ivb->insert(&t->matrix, sizeof(glm::mat4));
         }
-        vb->upload();
-        ib->upload();
+        ivb->upload();
     });
-    quadJob.run_after(transformJob);
+    instanceMatrixJob.run_after(transformJob);
 
     auto cameraViewJob = engine->jobs().enqueue<beagle::CameraViewSystem>(&engine->entities());
     auto cameraOrthoJob = engine->jobs().enqueue<beagle::CameraOrthographicSystem>(&engine->entities(), window.width(), window.height());
+    auto cameraPerspectiveJob = engine->jobs().enqueue<beagle::CameraPerspectiveSystem>(&engine->entities(), window.width(), window.height());
     auto cameraUploadJob = engine->jobs().enqueue<beagle::CameraUploadSystem>(&engine->entities());
     cameraUploadJob.run_after(cameraViewJob);
     cameraUploadJob.run_after(cameraOrthoJob);
+    cameraUploadJob.run_after(cameraPerspectiveJob);
 
     auto renderJob = engine->jobs().enqueue<beagle::Job>([this]{
         auto context = eagle::Application::instance().window().rendering_context();
@@ -188,15 +225,16 @@ void TemplateGame::init(beagle::Engine* engine) {
         commandBuffer->begin_render_pass(context->main_render_pass(), context->main_frambuffer());
         commandBuffer->bind_shader(m_shader.lock());
         commandBuffer->bind_descriptor_sets(m_descriptorSet.lock(), 0);
-        commandBuffer->bind_vertex_buffer(m_vertexBuffer.lock());
+        commandBuffer->bind_vertex_buffer(m_vertexBuffer.lock(), 0);
+        commandBuffer->bind_vertex_buffer(m_instanceVertexBuffer.lock(), 1);
         commandBuffer->bind_index_buffer(m_indexBuffer.lock());
-        commandBuffer->draw_indexed(m_quadsGroup.size() * 6, 0, 0);
+        commandBuffer->draw_indexed(36, m_quadsGroup.size(), 0, 0, 0);
         commandBuffer->end_render_pass();
         commandBuffer->end();
 
         context->present_frame(commandBuffer);
     });
-    renderJob.run_after(quadJob);
+    renderJob.run_after(instanceMatrixJob);
     renderJob.run_after(cameraUploadJob);
 }
 

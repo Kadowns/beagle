@@ -8,6 +8,8 @@ layout (binding = 0, set = 0) uniform CameraUniform {
 layout(location = 0) in vec3 aPosition;
 layout(location = 1) in vec4 aColor;
 
+layout(location = 2) in mat4 aTransform;
+
 layout(location = 0) out vec4 vColor;
 
 out gl_PerVertex{
@@ -16,5 +18,5 @@ out gl_PerVertex{
 
 void main() {
     vColor = aColor;
-    gl_Position =  uCamera.vp * vec4(aPosition, 1.0f);
+    gl_Position =  uCamera.vp * aTransform * vec4(aPosition, 1.0f);
 }
