@@ -2,7 +2,8 @@
 // Created by Ricardo on 4/21/2021.
 //
 
-#include "template_game.h"
+#include <template/template_game.h>
+#include <template/ecs/systems/camera_control_system.h>
 #include <eagle/application.h>
 #include <eagle/window.h>
 
@@ -130,7 +131,7 @@ void TemplateGame::init(beagle::Engine* engine) {
     rot->frequency = glm::vec3(60, 40, 20);
     e.assign<beagle::Transform>();
 ////    e.assign<Scaler>();
-    osc->anchor = pos->position;
+    osc->anchor = pos->vec;
     osc->amplitude = 4;
 
     e = engine->entities().create();
@@ -142,16 +143,20 @@ void TemplateGame::init(beagle::Engine* engine) {
     e.assign<beagle::Transform>();
     osc = e.assign<Oscilator>();
     osc->frequency = -1;
-    osc->anchor = pos->position;
+    osc->anchor = pos->vec;
     osc->amplitude = 2;
 
 
     e = engine->entities().create();
     e.assign<beagle::Position>(0.0f, 0.0f, 20.0f);
+    e.assign<beagle::Rotation>();
 //    e.assign<beagle::CameraOrthographicProjection>(0, 20, 12, 0, 0.1f, 100.0f);
     e.assign<beagle::CameraPerspectiveProjection>(glm::radians(45.0f), window.width() / window.height(), 0.1f, 1000.0f);
     e.assign<beagle::CameraProjection>();
-    e.assign<beagle::CameraView>();
+    e.assign<beagle::Transform>();
+    auto controller = e.assign<CameraController>(&eagle::Application::instance().event_bus());
+    controller->speed = 10.0f;
+    controller->mouseSpeed = 10.0f;
     auto camera = e.assign<beagle::Camera>();
     camera->ubo = context->create_uniform_buffer(sizeof(beagle::CameraUniform), nullptr);
     camera->renderPass = context->main_render_pass();
@@ -167,7 +172,7 @@ void TemplateGame::init(beagle::Engine* engine) {
     auto rotatorJob = engine->jobs().enqueue<beagle::Job>([this, engine]{
         float t = engine->timer().time();
         for (auto[rotation, rotator] : m_rotatorGroup){
-            rotation->rotation = glm::quat(glm::radians(t * rotator->frequency));
+            rotation->quat = glm::quat(glm::radians(t * rotator->frequency));
         }
     });
 
@@ -175,7 +180,7 @@ void TemplateGame::init(beagle::Engine* engine) {
         float t = engine->timer().time();
 
         for (auto[tr, osc] : m_oscilatorGroup){
-            tr->position.x = osc->anchor.x + sinf(t * osc->frequency) * osc->amplitude;
+            tr->vec.x = osc->anchor.x + sinf(t * osc->frequency) * osc->amplitude;
         }
     });
 
@@ -185,9 +190,9 @@ void TemplateGame::init(beagle::Engine* engine) {
         for (auto[tr, osc] : m_scalerGroup){
             auto amplitude = osc->amplitude;
             auto frequency = osc->frequency;
-            auto scale = tr->scale;
+            auto scale = tr->vec;
             scale = glm::vec3(1) * (sinf(frequency * t) * amplitude);
-            tr->scale = scale;
+            tr->vec = scale;
         }
     });
 
@@ -207,13 +212,14 @@ void TemplateGame::init(beagle::Engine* engine) {
     });
     instanceMatrixJob.run_after(transformJob);
 
-    auto cameraViewJob = engine->jobs().enqueue<beagle::CameraViewSystem>(&engine->entities());
+    auto cameraControllerJob = engine->jobs().enqueue<CameraControlSystem>(&engine->entities(), &engine->timer());
+    cameraControllerJob.run_before(transformJob);
     auto cameraOrthoJob = engine->jobs().enqueue<beagle::CameraOrthographicSystem>(&engine->entities(), window.width(), window.height());
     auto cameraPerspectiveJob = engine->jobs().enqueue<beagle::CameraPerspectiveSystem>(&engine->entities(), window.width(), window.height());
     auto cameraUploadJob = engine->jobs().enqueue<beagle::CameraUploadSystem>(&engine->entities());
-    cameraUploadJob.run_after(cameraViewJob);
     cameraUploadJob.run_after(cameraOrthoJob);
     cameraUploadJob.run_after(cameraPerspectiveJob);
+    cameraUploadJob.run_after(transformJob);
 
     auto renderJob = engine->jobs().enqueue<beagle::Job>([this]{
         auto context = eagle::Application::instance().window().rendering_context();

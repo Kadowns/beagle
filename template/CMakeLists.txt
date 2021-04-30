@@ -6,6 +6,7 @@ add_subdirectory(../ ${CMAKE_BINARY_DIR}/beagle)
 
 set(APP_SOURCES
         src/template/template_game.cpp
+        src/template/ecs/systems/camera_control_system.cpp
         )
 
 add_library(${APP_NAME_LIB} STATIC ${APP_SOURCES})
