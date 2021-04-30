@@ -5,7 +5,7 @@
 #ifndef BEAGLE_CAMERA_EVENTS_H
 #define BEAGLE_CAMERA_EVENTS_H
 
-#include <beagle/ecs/components/camera.h>
+#include <beagle/ecs/entity.h>
 
 namespace beagle {
 

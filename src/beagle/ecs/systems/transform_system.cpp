@@ -15,13 +15,13 @@ void TransformSystem::execute() {
         auto entity = tr.owner();
         glm::mat4 matrix(1);
         if (entity.has_component<Position>()){
-            matrix = glm::translate(matrix, entity.component<Position>()->position);
+            matrix = glm::translate(matrix, entity.component<Position>()->vec);
         }
         if (entity.has_component<Rotation>()){
-            matrix *= glm::mat4_cast(entity.component<Rotation>()->rotation);
+            matrix *= glm::mat4_cast(entity.component<Rotation>()->quat);
         }
         if (entity.has_component<Scale>()){
-            matrix = glm::scale(matrix, entity.component<Scale>()->scale);
+            matrix = glm::scale(matrix, entity.component<Scale>()->vec);
         }
         tr->matrix = matrix;
         tr->inverseMatrix = glm::inverse(matrix);

@@ -23,8 +23,8 @@ void CameraUploadSystem::execute() {
     CameraUniform ubo{};
 
     for (auto entityId : m_dirtyCameras) {
-        auto[camera, projection, view] = m_manager->entity_from_id(entityId).components<Camera, CameraProjection, CameraView>();
-        ubo.vp = projection->matrix * view->matrix;
+        auto[camera, projection, transform] = m_manager->entity_from_id(entityId).components<Camera, CameraProjection, Transform>();
+        ubo.vp = projection->matrix * transform->inverseMatrix;
         auto cameraUbo = camera->ubo.lock();
         cameraUbo->copy_from(&ubo, sizeof(ubo), 0);
         cameraUbo->upload();
@@ -105,51 +105,5 @@ bool CameraPerspectiveSystem::receive(const eagle::OnWindowResized& ev) {
     m_windowResized = true;
     m_width = ev.width;
     m_height = ev.height;
-    return false;
-}
-
-
-CameraViewSystem::CameraViewSystem(EntityManager* manager) {
-    m_manager = manager;
-    m_eventBus = &manager->event_bus();
-    m_listener.attach(m_eventBus);
-    m_listener.receive<OnCameraTransformed>(this);
-
-    EntityGroup<CameraView> cameraGroup;
-    cameraGroup.attach(manager);
-    for (auto[view] : cameraGroup){
-        m_dirtyCameras.insert(view.owner().id());
-    }
-}
-
-void CameraViewSystem::execute() {
-    if (m_dirtyCameras.empty()){
-        return;
-    }
-
-    for (auto entityId : m_dirtyCameras){
-        auto entity = m_manager->entity_from_id(entityId);
-
-        glm::vec3 position;
-        glm::quat rotation(glm::vec3(0));
-        if (entity.has_component<Position>()){
-            position = entity.component<Position>()->position;
-        }
-        if (entity.has_component<Rotation>()){
-            rotation = entity.component<Rotation>()->rotation;
-        }
-        entity.component<CameraView>()->matrix = glm::lookAt(position, rotation * glm::vec3(0, 0, -1), rotation * glm::vec3(0, 1, 0));
-        m_eventBus->emit(OnCameraUpdate{entityId});
-    }
-    m_dirtyCameras.clear();
-}
-
-bool CameraViewSystem::receive(const OnCameraTransformed& ev) {
-    m_dirtyCameras.insert(ev.entityId);
-    return false;
-}
-
-bool CameraViewSystem::receive(const OnComponentAdded<CameraView>& ev) {
-    m_dirtyCameras.insert(ev.component.owner().id());
     return false;
 }

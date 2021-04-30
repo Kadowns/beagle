@@ -58,23 +58,6 @@ private:
     bool m_windowResized = true;
 };
 
-class CameraViewSystem : public BaseJob {
-public:
-    explicit CameraViewSystem(EntityManager* manager);
-    void execute() override;
-
-    bool receive(const OnCameraTransformed& ev);
-    bool receive(const OnComponentAdded<CameraView>& ev);
-
-private:
-    EntityManager* m_manager;
-    eagle::EventBus* m_eventBus;
-    eagle::EventListener m_listener;
-    std::set<Entity::Id> m_dirtyCameras;
-
-};
-
-
 }
 
 #endif //BEAGLE_CAMERA_SYSTEM_H

@@ -10,25 +10,25 @@
 namespace beagle {
 
 struct Position {
-    Position() : position(0) {}
-    explicit Position(const glm::vec3& position) : position(position) {}
-    Position(float x, float y, float z) : position(x, y, z) {}
-    glm::vec3 position;
+    Position() : vec(0) {}
+    explicit Position(const glm::vec3& position) : vec(position) {}
+    Position(float x, float y, float z) : vec(x, y, z) {}
+    glm::vec3 vec;
 };
 
 struct Rotation {
-    Rotation() : rotation(glm::vec3(0)) {}
-    explicit Rotation(const glm::vec3& rotation) : rotation(rotation) {}
-    Rotation(float x, float y, float z) : rotation(glm::vec3(x, y, z)) {}
-    Rotation(float x, float y, float z, float w) : rotation(x, y, z, w) {}
-    glm::quat rotation;
+    Rotation() : quat(glm::vec3(0)) {}
+    explicit Rotation(const glm::vec3& rotation) : quat(rotation) {}
+    Rotation(float x, float y, float z) : quat(glm::vec3(x, y, z)) {}
+    Rotation(float w, float x, float y, float z) : quat(w, x, y, z) {}
+    glm::quat quat;
 };
 
 struct Scale {
-    Scale() : scale(1) {}
-    explicit Scale(const glm::vec3& scale) : scale(scale) {}
-    Scale(float x, float y, float z) : scale(x, y, z) {}
-    glm::vec3 scale;
+    Scale() : vec(1) {}
+    explicit Scale(const glm::vec3& scale) : vec(scale) {}
+    Scale(float x, float y, float z) : vec(x, y, z) {}
+    glm::vec3 vec;
 };
 
 struct Transform {
