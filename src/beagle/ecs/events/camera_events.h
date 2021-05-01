@@ -13,10 +13,6 @@ struct OnCameraUpdate {
     Entity::Id entityId;
 };
 
-struct OnCameraTransformed {
-    Entity::Id entityId;
-};
-
 }
 
 #endif //TEMPLATE_APP_CAMERA_EVENTS_H
