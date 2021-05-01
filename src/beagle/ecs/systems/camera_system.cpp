@@ -2,7 +2,6 @@
 // Created by Ricardo on 4/25/2021.
 //
 
-#include <beagle/renderer/uniforms/camera_uniform.h>
 #include <beagle/ecs/components/transform.h>
 #include "camera_system.h"
 
