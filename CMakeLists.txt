@@ -10,6 +10,8 @@ set(BEAGLE_SOURCES
         src/beagle/ecs/job_system.cpp
         src/beagle/ecs/systems/transform_system.cpp
         src/beagle/ecs/systems/camera_system.cpp
+        src/beagle/ecs/systems/render_system.cpp
+        src/beagle/assets/mesh.cpp
         )
 
 
