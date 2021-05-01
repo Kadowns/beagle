@@ -6,10 +6,6 @@
 
 #include <beagle/ecs/events/camera_events.h>
 
-#include <eagle/application.h>
-#include <eagle/window.h>
-
-
 CameraControlSystem::CameraControlSystem(beagle::EntityManager* manager, eagle::Timer* timer) {
     m_cameraPositionGroup.attach(manager);
     m_timer = timer;
@@ -34,7 +30,7 @@ void CameraControlSystem::execute() {
 
                 glm::quat yaw = glm::angleAxis(glm::radians(controller->yaw), glm::vec3(0, 1, 0));
                 glm::quat pitch = glm::angleAxis(glm::radians(controller->pitch), glm::vec3(1, 0, 0));
-                rot = glm::normalize(yaw * pitch);
+                rot = glm::normalize(pitch * yaw);
             }
         }
 

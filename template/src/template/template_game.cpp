@@ -9,7 +9,7 @@
 
 #include <beagle/ecs/systems/transform_system.h>
 #include <beagle/ecs/systems/camera_system.h>
-#include <beagle/renderer/uniforms/camera_uniform.h>
+#include <beagle/ecs/systems/render_system.h>
 
 TemplateGame::TemplateGame() {
     EG_LOG_CREATE("template");
@@ -21,11 +21,6 @@ void TemplateGame::init(beagle::Engine* engine) {
     auto& window = eagle::Application::instance().window();
     auto context = window.rendering_context();
 
-    eagle::CommandBufferCreateInfo commandBufferCreateInfo = {};
-    commandBufferCreateInfo.level = eagle::CommandBufferLevel::MASTER;
-
-    m_commandBuffer = context->create_command_buffer(commandBufferCreateInfo);
-
     struct Vertex {
         glm::vec3 position;
         glm::vec4 color;
@@ -34,9 +29,6 @@ void TemplateGame::init(beagle::Engine* engine) {
     struct Cube {
         Vertex vertices[24];
     };
-
-    auto vb = m_vertexBuffer.lock();
-    auto ib = m_indexBuffer.lock();
 
     Cube cube = {{
                          //up
@@ -76,7 +68,7 @@ void TemplateGame::init(beagle::Engine* engine) {
                          {glm::vec4(1.0f, -1.0f, -1.0f, 1.0f), glm::vec4(1.0f, 0.6f, 0.5f, 1.0f)},
                  }};
 
-    uint16_t indices[36] = {
+    uint32_t indices[36] = {
             0, 3, 2, 0, 2, 1, //up
             4, 5, 6, 4, 6, 7, //down
             8, 9, 10, 8, 10, 11, //left
@@ -85,9 +77,10 @@ void TemplateGame::init(beagle::Engine* engine) {
             20, 21, 22, 20, 22, 23, //down
     };
 
-    m_vertexBuffer = context->create_vertex_buffer({eagle::UpdateType::BAKED, sizeof(Cube), &cube});
-    m_indexBuffer = context->create_index_buffer({eagle::UpdateType::BAKED, eagle::IndexBufferType::UINT_16, sizeof(uint16_t) * 36, indices});
-    m_instanceVertexBuffer = context->create_vertex_buffer({eagle::UpdateType::DYNAMIC});
+    auto cubeMesh = engine->mesh_pool().insert(&cube, sizeof(cube), indices, 36 * sizeof(uint32_t), 36);
+
+    engine->mesh_pool().upload();
+
 
     eagle::ShaderCreateInfo shaderCreateInfo = {
             context->main_render_pass(),
@@ -120,6 +113,7 @@ void TemplateGame::init(beagle::Engine* engine) {
     auto rot = e.assign<Rotator>();
     rot->frequency = glm::vec3(30, 15, 7.);
     e.assign<beagle::Transform>();
+    e.assign<beagle::MeshRenderer>(cubeMesh, m_shader.lock());
 //    e.assign<Scaler>();
 
     e = engine->entities().create();
@@ -130,6 +124,7 @@ void TemplateGame::init(beagle::Engine* engine) {
     rot = e.assign<Rotator>();
     rot->frequency = glm::vec3(60, 40, 20);
     e.assign<beagle::Transform>();
+    e.assign<beagle::MeshRenderer>(cubeMesh, m_shader.lock());
 ////    e.assign<Scaler>();
     osc->anchor = pos->vec;
     osc->amplitude = 4;
@@ -141,6 +136,7 @@ void TemplateGame::init(beagle::Engine* engine) {
     rot = e.assign<Rotator>();
     rot->frequency = glm::vec3(90, 45, 22.5f);
     e.assign<beagle::Transform>();
+    e.assign<beagle::MeshRenderer>(cubeMesh, m_shader.lock());
     osc = e.assign<Oscilator>();
     osc->frequency = -1;
     osc->anchor = pos->vec;
@@ -150,24 +146,21 @@ void TemplateGame::init(beagle::Engine* engine) {
     e = engine->entities().create();
     e.assign<beagle::Position>(0.0f, 0.0f, 20.0f);
     e.assign<beagle::Rotation>();
-//    e.assign<beagle::CameraOrthographicProjection>(0, 20, 12, 0, 0.1f, 100.0f);
     e.assign<beagle::CameraPerspectiveProjection>(glm::radians(45.0f), window.width() / window.height(), 0.1f, 1000.0f);
     e.assign<beagle::CameraProjection>();
     e.assign<beagle::Transform>();
+    e.assign<beagle::Camera>(context);
+    e.assign<beagle::MeshFilter>(context, &engine->mesh_pool());
     auto controller = e.assign<CameraController>(&eagle::Application::instance().event_bus());
     controller->speed = 10.0f;
-    controller->mouseSpeed = 10.0f;
-    auto camera = e.assign<beagle::Camera>();
-    camera->ubo = context->create_uniform_buffer(sizeof(beagle::CameraUniform), nullptr);
-    camera->renderPass = context->main_render_pass();
-    camera->framebuffer = context->main_frambuffer();
+    controller->mouseSpeed = 6.0f;
+
 
     m_oscilatorGroup.attach(&engine->entities());
     m_scalerGroup.attach(&engine->entities());
     m_rotatorGroup.attach(&engine->entities());
     m_quadsGroup.attach(&engine->entities());
 
-    m_descriptorSet = context->create_descriptor_set(m_shader.lock()->get_descriptor_set_layout(0).lock(), {camera->ubo.lock()});
 
     auto rotatorJob = engine->jobs().enqueue<beagle::Job>([this, engine]{
         float t = engine->timer().time();
@@ -201,19 +194,12 @@ void TemplateGame::init(beagle::Engine* engine) {
     transformJob.run_after(oscilatorJob);
     transformJob.run_after(rotatorJob);
 
-    auto instanceMatrixJob = engine->jobs().enqueue<beagle::Job>([this]{
-        auto ivb = m_instanceVertexBuffer.lock();
-        ivb->reserve(m_quadsGroup.size() * sizeof(glm::mat4));
-        ivb->clear();
-        for (auto[t] : m_quadsGroup){
-            ivb->insert(&t->matrix, sizeof(glm::mat4));
-        }
-        ivb->upload();
-    });
-    instanceMatrixJob.run_after(transformJob);
+    auto buildMeshData = engine->jobs().enqueue<beagle::BuildMeshGroupsJob>(&engine->entities());
+    buildMeshData.run_after(transformJob);
 
     auto cameraControllerJob = engine->jobs().enqueue<CameraControlSystem>(&engine->entities(), &engine->timer());
     cameraControllerJob.run_before(transformJob);
+
     auto cameraOrthoJob = engine->jobs().enqueue<beagle::CameraOrthographicSystem>(&engine->entities(), window.width(), window.height());
     auto cameraPerspectiveJob = engine->jobs().enqueue<beagle::CameraPerspectiveSystem>(&engine->entities(), window.width(), window.height());
     auto cameraUploadJob = engine->jobs().enqueue<beagle::CameraUploadSystem>(&engine->entities());
@@ -221,27 +207,19 @@ void TemplateGame::init(beagle::Engine* engine) {
     cameraUploadJob.run_after(cameraPerspectiveJob);
     cameraUploadJob.run_after(transformJob);
 
-    auto renderJob = engine->jobs().enqueue<beagle::Job>([this]{
-        auto context = eagle::Application::instance().window().rendering_context();
-        if (!context->prepare_frame()){
-            return;
-        }
-        auto commandBuffer = m_commandBuffer.lock();
-        commandBuffer->begin();
-        commandBuffer->begin_render_pass(context->main_render_pass(), context->main_frambuffer());
-        commandBuffer->bind_shader(m_shader.lock());
-        commandBuffer->bind_descriptor_sets(m_descriptorSet.lock(), 0);
-        commandBuffer->bind_vertex_buffer(m_vertexBuffer.lock(), 0);
-        commandBuffer->bind_vertex_buffer(m_instanceVertexBuffer.lock(), 1);
-        commandBuffer->bind_index_buffer(m_indexBuffer.lock());
-        commandBuffer->draw_indexed(36, m_quadsGroup.size(), 0, 0, 0);
-        commandBuffer->end_render_pass();
-        commandBuffer->end();
 
-        context->present_frame(commandBuffer);
-    });
-    renderJob.run_after(instanceMatrixJob);
-    renderJob.run_after(cameraUploadJob);
+    auto renderBeginJob = engine->jobs().enqueue<beagle::RenderBeginJob>(context);
+    renderBeginJob.run_after(buildMeshData);
+    renderBeginJob.run_after(cameraUploadJob);
+
+    auto renderMeshFilter = engine->jobs().enqueue<beagle::RenderMeshFilterJob>(&engine->entities());
+    renderMeshFilter.run_after(renderBeginJob);
+
+    auto renderCameraJob = engine->jobs().enqueue<beagle::RenderCameraJob>(&engine->entities());
+    renderCameraJob.run_after(renderMeshFilter);
+
+    auto renderEndJob = engine->jobs().enqueue<beagle::RenderEndJob>(context);
+    renderEndJob.run_after(renderCameraJob);
 }
 
 void TemplateGame::step(beagle::Engine* engine) {
