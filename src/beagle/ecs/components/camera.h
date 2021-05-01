@@ -10,20 +10,44 @@
 #include <eagle/renderer/uniform_buffer.h>
 #include <eagle/renderer/render_pass.h>
 #include <eagle/renderer/framebuffer.h>
+#include <eagle/renderer/rendering_context.h>
 
 namespace beagle {
 
+struct CameraUniform {
+    glm::mat4 vp;
+};
+
 struct Camera {
-    std::weak_ptr<eagle::UniformBuffer> ubo;
+    explicit Camera(eagle::RenderingContext* context) :
+    context(context), renderPass(context->main_render_pass()), framebuffer(context->main_frambuffer()) {
+        eagle::CommandBufferCreateInfo commandBufferCreateInfo = {};
+        commandBufferCreateInfo.level = eagle::CommandBufferLevel::PRIMARY;
+        commandBuffer = context->create_command_buffer(commandBufferCreateInfo);
+
+        ubo = context->create_uniform_buffer(sizeof(CameraUniform), nullptr);
+
+        std::vector<eagle::DescriptorBindingDescription> bindings = {};
+        eagle::DescriptorBindingDescription bindingDescription = {};
+        bindingDescription.binding = 0;
+        bindingDescription.descriptorType = eagle::DescriptorType::UNIFORM_BUFFER;
+        bindingDescription.size = sizeof(CameraUniform);
+        bindingDescription.shaderStage = eagle::ShaderStage::VERTEX;
+
+        descriptorSetLayout = context->create_descriptor_set_layout({bindingDescription});
+        descriptorSet = context->create_descriptor_set(descriptorSetLayout.lock(), {ubo.lock()});
+    }
+    eagle::RenderingContext* context;
     std::weak_ptr<eagle::RenderPass> renderPass;
     std::weak_ptr<eagle::Framebuffer> framebuffer;
+    std::weak_ptr<eagle::UniformBuffer> ubo;
+    std::weak_ptr<eagle::DescriptorSetLayout> descriptorSetLayout;
+    std::weak_ptr<eagle::DescriptorSet> descriptorSet;
+    std::weak_ptr<eagle::CommandBuffer> commandBuffer;
+    std::vector<std::shared_ptr<eagle::CommandBuffer>> secondaryCommandBuffers;
 };
 
 struct CameraProjection {
-    glm::mat4 matrix;
-};
-
-struct CameraView {
     glm::mat4 matrix;
 };
 
