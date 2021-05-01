@@ -22,6 +22,8 @@ void Engine::init() {
     m_listener.attach(&eagle::Application::instance().event_bus());
     m_listener.receive<eagle::OnWindowClose>(this);
     m_listener.receive<eagle::OnWindowResized>(this);
+    m_meshPool = std::make_unique<MeshPool>(eagle::Application::instance().window().rendering_context());
+
     m_game->init(this);
     m_timer.start();
 }
@@ -35,6 +37,7 @@ void Engine::step() {
 
 void Engine::destroy() {
     m_game->destroy(this);
+    m_entityManager.reset();
     m_listener.detach();
 }
 

@@ -10,6 +10,7 @@
 #include <beagle/ecs/entity.h>
 #include <beagle/ecs/job_system.h>
 #include <beagle/ecs/components/transform.h>
+#include <beagle/assets/mesh.h>
 
 #include <eagle/application_delegate.h>
 #include <eagle/timer.h>
@@ -17,6 +18,7 @@
 #include <eagle/renderer/rendering_context.h>
 #include <eagle/renderer/command_buffer.h>
 #include <eagle/events/window_events.h>
+
 
 namespace beagle {
 
@@ -35,6 +37,7 @@ public:
     bool receive(const eagle::OnWindowResized& ev);
 
     inline EntityManager& entities() { return m_entityManager; }
+    inline MeshPool& mesh_pool() { return *m_meshPool; }
     inline JobSystem& jobs() { return m_jobSystem; }
     inline eagle::Timer& timer() { return m_timer; }
 
@@ -48,6 +51,7 @@ private:
 
 
     EntityManager m_entityManager;
+    std::unique_ptr<MeshPool> m_meshPool;
 
     JobSystem m_jobSystem;
     std::unique_ptr<Game> m_game;
