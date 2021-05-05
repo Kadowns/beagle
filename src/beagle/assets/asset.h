@@ -10,7 +10,7 @@
 
 namespace beagle {
 
-template<typename T, typename Pool = std::vector<T>, typename IndexType = typename Pool::size_type>
+template<typename T, typename Pool = std::vector<T>, typename IndexType = typename Pool::index_type>
 class Asset {
 public:
 
