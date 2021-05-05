@@ -2,7 +2,7 @@
 // Created by Ricardo on 5/1/2021.
 //
 
-#include "mesh.h"
+#include "mesh_pool.h"
 
 using namespace beagle;
 

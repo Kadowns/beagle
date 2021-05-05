@@ -44,7 +44,7 @@ public:
                       void* indices, size_t indexCount, size_t indexSize);
     void upload();
 
-    Mesh& operator[](size_type index) { return m_meshes[index]; }
+    Mesh& operator[](index_type index) { return m_meshes[index]; }
 
     inline std::shared_ptr<eagle::VertexBuffer> vertex_buffer() const { return m_vertexBuffer.lock(); }
     inline std::shared_ptr<eagle::IndexBuffer> index_buffer() const { return m_indexBuffer.lock(); }
@@ -57,7 +57,7 @@ private:
 
 class MeshHandle : public Asset<Mesh, MeshPool> {
 public:
-    MeshHandle(MeshPool* pool, MeshPool::size_type index) : Asset<Mesh, MeshPool>(pool, index) {}
+    MeshHandle(MeshPool* pool, MeshPool::index_type index) : Asset<Mesh, MeshPool>(pool, index) {}
 };
 
 template<typename V, typename I>
