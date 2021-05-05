@@ -96,7 +96,7 @@ public:
 
     void expand(size_t expandedElementCount) {
         size_t expandedSize = expandedElementCount * m_elementSize;
-        while (expandedSize > m_size){
+        while (expandedSize >= m_size){
             m_chunks.emplace_back(new uint8_t[m_elementSize * m_chunkElementCount]);
             m_size += m_elementSize * m_chunkElementCount;
         }
