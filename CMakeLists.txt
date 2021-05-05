@@ -11,7 +11,11 @@ set(BEAGLE_SOURCES
         src/beagle/ecs/systems/transform_system.cpp
         src/beagle/ecs/systems/camera_system.cpp
         src/beagle/ecs/systems/render_system.cpp
-        src/beagle/assets/mesh.cpp
+        src/beagle/assets/mesh_pool.cpp
+        src/beagle/assets/material_pool.cpp
+        src/beagle/assets/shader_pool.cpp
+        src/beagle/assets/texture_pool.cpp
+        src/beagle/assets/asset_manager.cpp
         )
 
 
