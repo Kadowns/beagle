@@ -6,7 +6,7 @@
 
 using namespace beagle;
 
-TransformSystem::TransformSystem(EntityManager* manager) {
+TransformSystem::TransformSystem(EntityManager* manager) : BaseJob("TransformSystem"){
     m_transformGroup.attach(manager);
 }
 

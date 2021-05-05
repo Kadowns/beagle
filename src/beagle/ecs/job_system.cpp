@@ -24,8 +24,8 @@ JobSystem::Worker::Worker(JobSystem* manager) : m_manager(manager) {
            if (m_stop) {
                return;
            }
-           m_manager->m_jobGraph.vertex(m_currentJobIndex)->m_job->execute();
-           m_manager->job_finished(m_currentJobIndex);
+           int64_t time = m_manager->m_jobGraph.vertex(m_currentJobIndex)->m_job->timed_execute();
+           m_manager->job_finished(m_currentJobIndex, time);
        }
     });
 }
@@ -54,6 +54,7 @@ JobSystem::~JobSystem() {
 
 void JobSystem::execute() {
 
+    m_executionTimes.clear();
     for (auto vertex : m_jobGraph){
         vertex->set_executed(false);
         vertex->set_enqueued(false);
@@ -104,9 +105,11 @@ bool JobSystem::has_unfinished_job() {
     return std::any_of(m_jobGraph.begin(), m_jobGraph.end(), [](JobHandle* vertex){return !vertex->is_executed();});
 }
 
-void JobSystem::job_finished(size_t jobId) {
+void JobSystem::job_finished(size_t jobId, int64_t executionTime) {
     std::unique_lock<std::mutex> lock(m_queueMutex);
-    m_jobGraph.vertex(jobId)->set_executed(true);
+    auto vertex = m_jobGraph.vertex(jobId);
+    vertex->set_executed(true);
+    m_executionTimes.emplace_back(JobProfiling(vertex->m_job->name(), executionTime));
     for(auto[connectionIndex, connectionRelation] : m_jobGraph.edges_from(jobId)){
         if (connectionRelation != JobRelation::RUN_BEFORE){
             continue;

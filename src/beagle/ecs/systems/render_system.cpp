@@ -8,7 +8,7 @@
 
 using namespace beagle;
 
-RenderBeginJob::RenderBeginJob(eagle::RenderingContext* context) : m_context(context) {
+RenderBeginJob::RenderBeginJob(eagle::RenderingContext* context) : m_context(context), BaseJob("RenderBeginJob") {
 
 }
 
@@ -18,7 +18,7 @@ void RenderBeginJob::execute() {
     }
 }
 
-RenderEndJob::RenderEndJob(eagle::RenderingContext* context) : m_context(context) {
+RenderEndJob::RenderEndJob(eagle::RenderingContext* context) : m_context(context), BaseJob("RenderEndJob") {
 
 }
 
@@ -26,7 +26,7 @@ void RenderEndJob::execute() {
     m_context->present_frame();
 }
 
-BuildMeshGroupsJob::BuildMeshGroupsJob(EntityManager* manager) {
+BuildMeshGroupsJob::BuildMeshGroupsJob(EntityManager* manager) : BaseJob("BuildMeshGroupsJob") {
     m_meshRendererGroup.attach(manager);
     m_meshFilterGroup.attach(manager);
 }
@@ -36,7 +36,7 @@ void BuildMeshGroupsJob::execute() {
     class InstanceDataGroup {
     public:
         InstanceDataGroup() = default;
-        explicit InstanceDataGroup(size_t capacity, std::shared_ptr<eagle::Shader> shader) :
+        explicit InstanceDataGroup(size_t capacity, MaterialHandle material) :
         m_buffer((uint8_t*)malloc(capacity)),
         m_capacity(capacity),
         m_size(0),
@@ -111,7 +111,7 @@ void BuildMeshGroupsJob::execute() {
     }
 }
 
-RenderMeshFilterJob::RenderMeshFilterJob(EntityManager* manager) {
+RenderMeshFilterJob::RenderMeshFilterJob(EntityManager* manager) : BaseJob("RenderMeshFilterJob") {
     m_meshFilterGroup.attach(manager);
 }
 
@@ -142,7 +142,7 @@ void RenderMeshFilterJob::execute() {
     }
 }
 
-RenderCameraJob::RenderCameraJob(EntityManager* manager) {
+RenderCameraJob::RenderCameraJob(EntityManager* manager) : BaseJob("RenderCameraJob") {
     m_cameraGroup.attach(manager);
 }
 

@@ -32,12 +32,22 @@ void Engine::step() {
     m_timer.update();
     m_game->step(this);
     m_jobSystem.execute();
-    wait_for_target_fps(m_timer.delta_time());
+
+
+    int64_t accumulator = 0;
+    for (const auto&[name, time] : m_jobSystem.job_profiling()){
+        EG_DEBUG("beagle", "{0} executed in {1}ns", name, time);
+        accumulator += time;
+    }
+    EG_DEBUG("beagle", "Total execution time: {0}, FPS: {1}", accumulator, 1 / m_timer.delta_time());
+//    eagle::Application::instance().quit();
+//    wait_for_target_fps(m_timer.delta_time());
 }
 
 void Engine::destroy() {
     m_game->destroy(this);
     m_entityManager.reset();
+    m_assetManager.reset();
     m_listener.detach();
 }
 

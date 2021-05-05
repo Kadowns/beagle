@@ -6,7 +6,7 @@
 
 #include <beagle/ecs/events/camera_events.h>
 
-CameraControlSystem::CameraControlSystem(beagle::EntityManager* manager, eagle::Timer* timer) {
+CameraControlSystem::CameraControlSystem(beagle::EntityManager* manager, eagle::Timer* timer) : BaseJob("CameraControlSystem") {
     m_cameraPositionGroup.attach(manager);
     m_timer = timer;
     m_eventBus = &manager->event_bus();

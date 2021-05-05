@@ -11,18 +11,34 @@
 #include <condition_variable>
 #include <functional>
 
+#include <eagle/timer.h>
+
 #include <grapphs/adjacency_list.h>
 
 namespace beagle {
 
 class BaseJob {
 public:
+    explicit BaseJob(const std::string& name) : m_name(name) {}
+
+    uint64_t timed_execute() {
+        m_timer.start();
+        execute();
+        m_timer.stop();
+        return m_timer.time_nano();
+    }
     virtual void execute() = 0;
+
+    const std::string& name() { return m_name; }
+
+private:
+    eagle::Timer m_timer;
+    std::string m_name;
 };
 
 class Job : public BaseJob {
 public:
-    explicit Job(std::function<void()>&& task) : m_task(task) {}
+    explicit Job(std::function<void()>&& task, const std::string& name = "Lambda") : BaseJob(name), m_task(task) {}
     void execute() override {
         m_task();
     }
@@ -85,6 +101,14 @@ private:
 
     using JobGraph = gpp::AdjacencyList<JobHandle, JobRelation>;
 
+    struct JobProfiling {
+        JobProfiling(const std::string& name, int64_t durationNano) :
+        name(name), durationNano(durationNano) {}
+
+        const std::string& name;
+        int64_t durationNano;
+    };
+
 public:
 
     JobSystem();
@@ -98,6 +122,7 @@ public:
     }
 
     void execute();
+    const std::vector<JobProfiling>& job_profiling() const { return m_executionTimes; }
 
 private:
     friend Worker;
@@ -107,7 +132,7 @@ private:
     bool has_available_job();
     bool is_job_available(size_t jobId);
     void enqueue_available_jobs();
-    void job_finished(size_t jobId);
+    void job_finished(size_t jobId, int64_t executionTime);
     size_t next_job();
 
 private:
@@ -116,6 +141,7 @@ private:
     std::condition_variable m_awakeWorker;
     std::vector<std::shared_ptr<Worker>> m_workers;
     std::queue<size_t> m_availableJobs;
+    std::vector<JobProfiling> m_executionTimes;
 };
 
 }

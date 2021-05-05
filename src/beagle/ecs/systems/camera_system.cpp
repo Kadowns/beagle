@@ -8,7 +8,7 @@
 using namespace beagle;
 
 
-CameraUploadSystem::CameraUploadSystem(EntityManager* entities) {
+CameraUploadSystem::CameraUploadSystem(EntityManager* entities) : BaseJob("CameraUpdateSystem"){
     m_listener.attach(&entities->event_bus());
     m_listener.receive<OnCameraUpdate>(this);
     m_manager = entities;
@@ -36,7 +36,7 @@ bool CameraUploadSystem::receive(const OnCameraUpdate& ev) {
     return false;
 }
 
-CameraOrthographicSystem::CameraOrthographicSystem(EntityManager* entities, float width, float height) {
+CameraOrthographicSystem::CameraOrthographicSystem(EntityManager* entities, float width, float height) : BaseJob("CameraOrthographicSystem") {
     m_eventBus = &entities->event_bus();
     m_width = width;
     m_height = height;
@@ -77,7 +77,7 @@ bool CameraOrthographicSystem::receive(const eagle::OnWindowResized& ev) {
     return false;
 }
 
-CameraPerspectiveSystem::CameraPerspectiveSystem(EntityManager* entities, float width, float height) {
+CameraPerspectiveSystem::CameraPerspectiveSystem(EntityManager* entities, float width, float height) : BaseJob("CameraPerspectiveSystem") {
     m_eventBus = &entities->event_bus();
     m_width = width;
     m_height = height;
