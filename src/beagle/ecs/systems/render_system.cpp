@@ -41,14 +41,14 @@ void BuildMeshGroupsJob::execute() {
         m_capacity(capacity),
         m_size(0),
         m_instanceCount(0),
-        m_shader(std::move(shader)){}
+        m_material(material){}
 
-        InstanceDataGroup(InstanceDataGroup&& other) :
+        InstanceDataGroup(InstanceDataGroup&& other)  noexcept :
         m_buffer(other.m_buffer),
         m_capacity(other.m_capacity),
         m_size(other.m_size),
         m_instanceCount(other.m_instanceCount),
-        m_shader(std::move(other.m_shader))
+        m_material(other.m_material)
         {
             other.m_buffer = nullptr;
             other.m_capacity = 0;
@@ -72,21 +72,21 @@ void BuildMeshGroupsJob::execute() {
         size_t size() const { return m_size; }
         size_t capacity() const { return m_capacity; }
         size_t instance_count() const { return m_instanceCount; }
-        const std::shared_ptr<eagle::Shader>& shader() const { return m_shader; }
+        const MaterialHandle& material() const { return m_material; }
 
     private:
         uint8_t* m_buffer = nullptr;
         size_t m_capacity = 0;
         size_t m_size = 0;
         size_t m_instanceCount = 0;
-        std::shared_ptr<eagle::Shader> m_shader;
+        MaterialHandle m_material;
     };
 
     std::map<MeshHandle, InstanceDataGroup> instanceDataGroups;
     for (auto [transform, renderer] : m_meshRendererGroup){
         auto& mesh = renderer->mesh;
         if (instanceDataGroups.find(renderer->mesh) == instanceDataGroups.end()) {
-            InstanceDataGroup dataGroup(m_meshRendererGroup.size() * sizeof(glm::mat4),renderer->shader.lock());
+            InstanceDataGroup dataGroup(m_meshRendererGroup.size() * sizeof(glm::mat4), renderer->material);
             instanceDataGroups.emplace(mesh, std::move(dataGroup));
         }
         instanceDataGroups[mesh].insert(&transform->matrix, sizeof(glm::mat4));
@@ -101,7 +101,7 @@ void BuildMeshGroupsJob::execute() {
         for (auto&[mesh, instanceDataGroup] : instanceDataGroups){
             ib->insert(instanceDataGroup.data(), instanceDataGroup.size());
             MeshFilter::MeshGroup group = {mesh};
-            group.shader = instanceDataGroup.shader();
+            group.material = instanceDataGroup.material();
             group.instanceCount = instanceDataGroup.instance_count();
             group.instanceOffset = instanceOffset;
             instanceOffset += instanceDataGroup.instance_count();
@@ -126,12 +126,16 @@ void RenderMeshFilterJob::execute() {
         commandBuffer->bind_vertex_buffer(filter->meshPool->vertex_buffer(), 0);
         commandBuffer->bind_vertex_buffer(filter->instanceBuffer.lock(), 1);
         for (auto& group : filter->meshGroups){
-            commandBuffer->bind_shader(group.shader.lock());
+            auto& material = group.material;
+            commandBuffer->bind_shader(material->shader()->lock());
             commandBuffer->bind_descriptor_sets(camera->descriptorSet.lock(), 0);
+            if (auto descriptorSet = material->descriptor_set()){
+                commandBuffer->bind_descriptor_sets(descriptorSet, 1);
+            }
             commandBuffer->draw_indexed(
                     group.mesh->index_count(),
                     group.instanceCount,
-                    group.mesh->index_offset(),
+                    group.mesh->first_index(),
                     group.mesh->vertex_offset(),
                     group.instanceOffset
                     );
