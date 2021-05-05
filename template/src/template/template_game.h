@@ -8,18 +8,21 @@
 #include <beagle/engine.h>
 
 struct Oscilator {
+    Oscilator(const glm::vec3& anchor):anchor(anchor){}
     float amplitude = 1.0f;
     float frequency = 1.0f;
     glm::vec3 anchor;
 };
 
 struct Scaler {
+    Scaler(const glm::vec3& anchor):anchor(anchor){}
     float amplitude = 1.0f;
     float frequency = 1.0f;
     glm::vec3 anchor;
 };
 
 struct Rotator {
+    Rotator(const glm::vec3& frequency):frequency(frequency){}
     glm::vec3 frequency;
 };
 
@@ -34,7 +37,6 @@ public:
 
     void destroy(beagle::Engine* engine) override;
 private:
-    std::weak_ptr<eagle::Shader> m_shader;
 
     beagle::EntityGroup<beagle::Transform> m_quadsGroup;
     beagle::EntityGroup<beagle::Position, Oscilator> m_oscilatorGroup;
