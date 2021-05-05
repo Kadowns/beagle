@@ -22,15 +22,26 @@ void CameraControlSystem::execute() {
         auto rot = rotation->quat;
 
         if (input.mouse_button_down(EG_MOUSE_BUTTON_LEFT)){
-            auto[dx, dy] = input.mouse_move_delta();
-            if (dx != 0 || dy != 0){
+            if (input.mouse_button_pressed(EG_MOUSE_BUTTON_LEFT)){
+                auto[x, y] = input.mouse_position();
+                controller->lastMousePosition = glm::vec2(x, y);
+            }
+            controller->dtAccumulator += dt;
+            if (controller->dtAccumulator > 0.008f){
+                controller->dtAccumulator -= 0.008f;
 
-                controller->yaw += (float)-dx * dt * controller->mouseSpeed;
-                controller->pitch += (float)-dy * dt * controller->mouseSpeed;
+                auto[x, y] = input.mouse_position();
 
-                glm::quat yaw = glm::angleAxis(glm::radians(controller->yaw), glm::vec3(0, 1, 0));
-                glm::quat pitch = glm::angleAxis(glm::radians(controller->pitch), glm::vec3(1, 0, 0));
-                rot = glm::normalize(pitch * yaw);
+                auto dx = x - controller->lastMousePosition.x;
+                auto dy = y - controller->lastMousePosition.y;
+                controller->lastMousePosition = glm::vec2(x, y);
+                if (dx != 0 || dy != 0){
+
+                    float yaw = (float)-dx * dt * controller->mouseSpeed;
+                    float pitch = (float)-dy * dt * controller->mouseSpeed;
+
+                    rot = glm::normalize(rot * glm::quat(glm::radians(glm::vec3(pitch, yaw, 0))));
+                }
             }
         }
 

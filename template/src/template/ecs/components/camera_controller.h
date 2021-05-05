@@ -6,6 +6,7 @@
 #define TEMPLATE_APP_CAMERA_CONTROLLER_H
 
 #include <eagle/input.h>
+#include <beagle/math.h>
 
 struct CameraController {
 
@@ -20,6 +21,9 @@ struct CameraController {
     float speed = 1.0f;
     float mouseSpeed = 1.0f;
     float yaw = 0, pitch = 0;
+    float dtAccumulator = 0;
+    glm::vec2 lastMousePosition;
+
     eagle::Input input;
 };
 
