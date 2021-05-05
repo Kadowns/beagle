@@ -7,15 +7,16 @@
 
 #include <eagle/renderer/rendering_context.h>
 
-#include <beagle/assets/mesh.h>
+#include <beagle/assets/mesh_pool.h>
+#include <beagle/assets/material_pool.h>
 
 namespace beagle {
 
 struct MeshRenderer {
-    explicit MeshRenderer(const MeshHandle& mesh, const std::shared_ptr<eagle::Shader>& shader) :
-    mesh(mesh), shader(shader){}
+    explicit MeshRenderer(const MeshHandle& mesh, const MaterialHandle& material) :
+    mesh(mesh), material(material){}
     MeshHandle mesh;
-    std::weak_ptr<eagle::Shader> shader;
+    MaterialHandle material;
 };
 
 struct MeshFilter {
@@ -27,7 +28,7 @@ struct MeshFilter {
 
     struct MeshGroup {
         MeshHandle mesh;
-        std::weak_ptr<eagle::Shader> shader;
+        MaterialHandle material;
         uint32_t instanceCount;
         uint32_t instanceOffset;
     };
