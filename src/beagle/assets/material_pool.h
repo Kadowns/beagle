@@ -20,6 +20,7 @@ public:
     std::shared_ptr<eagle::DescriptorSet> descriptor_set() { return m_descriptorSet.lock(); }
 
     void update_uniform(size_t binding, void* data, size_t size, size_t offset = 0);
+    void update_texture(size_t binding, const TextureHandle& texture);
 
 private:
     friend class MaterialPool;
@@ -28,7 +29,6 @@ private:
 private:
     ShaderHandle m_shader;
     std::weak_ptr<eagle::DescriptorSet> m_descriptorSet;
-    std::vector<std::weak_ptr<eagle::DescriptorItem>> m_descriptors;
 
 };
 

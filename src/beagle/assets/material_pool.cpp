@@ -13,9 +13,8 @@ Material::Material(eagle::RenderingContext* context, const ShaderHandle& shader,
         return;
     }
     auto descriptorSetLayout = m_shader->lock()->get_descriptor_set_layout(1).lock();
-    std::vector<std::shared_ptr<eagle::DescriptorItem>> descriptors;
-    m_descriptors.reserve(descriptorSetLayout->bindings().size());
-    descriptors.reserve(m_descriptors.size());
+    std::vector<std::weak_ptr<eagle::DescriptorItem>> descriptors;
+    descriptors.reserve(descriptorSetLayout->bindings().size());
     for (auto& binding : descriptorSetLayout->bindings()){
         std::weak_ptr<eagle::DescriptorItem> descriptor;
         switch(binding.descriptorType){
@@ -31,18 +30,18 @@ Material::Material(eagle::RenderingContext* context, const ShaderHandle& shader,
                 descriptor = *defaultTexture;
                 break;
         }
-        m_descriptors.emplace_back(descriptor);
-        descriptors.emplace_back(descriptor.lock());
+        descriptors.emplace_back(descriptor);
     }
     m_descriptorSet = context->create_descriptor_set(descriptorSetLayout, descriptors);
 }
 
 void Material::update_uniform(size_t binding, void* data, size_t size, size_t offset) {
-    if (binding >= m_descriptors.size()){
+    auto descriptorSet = m_descriptorSet.lock();
+    if (binding >= descriptorSet->size()){
         return;
     }
 
-    auto descriptor = m_descriptors[binding].lock();
+    auto descriptor = descriptorSet->operator[](binding).lock();
     if (!descriptor || descriptor->type() != eagle::DescriptorType::UNIFORM_BUFFER){
         return;
     }
@@ -51,6 +50,15 @@ void Material::update_uniform(size_t binding, void* data, size_t size, size_t of
     assert(uniformBuffer);
     uniformBuffer->copy_from(data, size, offset);
     uniformBuffer->upload();
+}
+
+void Material::update_texture(size_t binding, const TextureHandle& texture) {
+    auto descriptorSet = m_descriptorSet.lock();
+    if (binding >= descriptorSet->size()){
+        return;
+    }
+    descriptorSet->operator[](binding) = *texture;
+    m_descriptorSet.lock()->update();
 }
 
 MaterialPool::MaterialPool(eagle::RenderingContext* context, TexturePool* texturePool) :
