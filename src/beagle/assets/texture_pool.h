@@ -19,6 +19,7 @@ public:
 public:
     explicit TexturePool(eagle::RenderingContext* context);
 
+    TextureHandle insert(const std::string& filepath);
     TextureHandle insert(const eagle::TextureCreateInfo& textureCreateInfo);
     TextureHandle default_texture();
 

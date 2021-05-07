@@ -25,6 +25,7 @@ set(BUILD_STATIC_LIBS TRUE)
 
 add_subdirectory(external/eagle)
 add_subdirectory(external/glm)
+add_subdirectory(external/stb)
 
 target_include_directories(beagle PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR}/src
@@ -33,4 +34,4 @@ target_include_directories(beagle PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR}/external/grapphs/include
         )
 
-target_link_libraries(beagle PUBLIC eagle glm)
+target_link_libraries(beagle PUBLIC eagle glm stb)
