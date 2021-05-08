@@ -3,12 +3,13 @@
 //
 
 #include <beagle/ecs/components/transform.h>
+#include <beagle/ecs/components/mesh_renderer.h>
 #include "camera_system.h"
 
 using namespace beagle;
 
-
-CameraOrthographicSystem::CameraOrthographicSystem(EntityManager* entities, float width, float height) : BaseJob("CameraOrthographicSystem") {
+CameraUpdateOrthographicProjectionJob::CameraUpdateOrthographicProjectionJob(EntityManager* entities, float width, float height) :
+    BaseJob("CameraUpdateOrthographicProjectionJob") {
     m_eventBus = &entities->event_bus();
     m_width = width;
     m_height = height;
@@ -17,7 +18,7 @@ CameraOrthographicSystem::CameraOrthographicSystem(EntityManager* entities, floa
     m_cameraGroup.attach(entities);
 }
 
-void CameraOrthographicSystem::execute() {
+void CameraUpdateOrthographicProjectionJob::execute() {
     if (!m_windowResized){
         return;
     }
@@ -42,14 +43,15 @@ void CameraOrthographicSystem::execute() {
     }
 }
 
-bool CameraOrthographicSystem::receive(const eagle::OnWindowResized& ev) {
+bool CameraUpdateOrthographicProjectionJob::receive(const eagle::OnWindowResized& ev) {
     m_windowResized = true;
     m_width = ev.width;
     m_height = ev.height;
     return false;
 }
 
-CameraPerspectiveSystem::CameraPerspectiveSystem(EntityManager* entities, float width, float height) : BaseJob("CameraPerspectiveSystem") {
+CameraUpdatePerspectiveProjectionJob::CameraUpdatePerspectiveProjectionJob(EntityManager* entities, float width, float height) :
+    BaseJob("CameraUpdatePerspectiveProjectionJob") {
     m_eventBus = &entities->event_bus();
     m_width = width;
     m_height = height;
@@ -58,7 +60,7 @@ CameraPerspectiveSystem::CameraPerspectiveSystem(EntityManager* entities, float 
     m_cameraGroup.attach(entities);
 }
 
-void CameraPerspectiveSystem::execute() {
+void CameraUpdatePerspectiveProjectionJob::execute() {
     if (!m_windowResized){
         return;
     }
@@ -72,7 +74,7 @@ void CameraPerspectiveSystem::execute() {
     }
 }
 
-bool CameraPerspectiveSystem::receive(const eagle::OnWindowResized& ev) {
+bool CameraUpdatePerspectiveProjectionJob::receive(const eagle::OnWindowResized& ev) {
     m_windowResized = true;
     m_width = ev.width;
     m_height = ev.height;

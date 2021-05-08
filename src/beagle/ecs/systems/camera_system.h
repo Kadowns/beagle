@@ -15,9 +15,9 @@
 namespace beagle {
 
 
-class CameraOrthographicSystem : public BaseJob {
+class CameraUpdateOrthographicProjectionJob : public BaseJob {
 public:
-    CameraOrthographicSystem(EntityManager* entities, float width, float height);
+    CameraUpdateOrthographicProjectionJob(EntityManager* entities, float width, float height);
     void execute() override;
 
     bool receive(const eagle::OnWindowResized& ev);
@@ -30,9 +30,9 @@ private:
     bool m_windowResized = true;
 };
 
-class CameraPerspectiveSystem : public BaseJob {
+class CameraUpdatePerspectiveProjectionJob : public BaseJob {
 public:
-    CameraPerspectiveSystem(EntityManager* entities, float width, float height);
+    CameraUpdatePerspectiveProjectionJob(EntityManager* entities, float width, float height);
     void execute() override;
 
     bool receive(const eagle::OnWindowResized& ev);
