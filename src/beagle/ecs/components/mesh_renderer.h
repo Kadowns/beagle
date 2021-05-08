@@ -7,6 +7,7 @@
 
 #include <eagle/renderer/rendering_context.h>
 
+#include <beagle/math.h>
 #include <beagle/assets/mesh_pool.h>
 #include <beagle/assets/material_pool.h>
 
@@ -37,9 +38,23 @@ struct MeshFilter {
         alignas(16) glm::vec3 direction;
     };
 
+    struct PointLight {
+        glm::vec4 color;
+        alignas(16) glm::vec3 position;
+        float constant;
+        float linear;
+        float quadratic;
+    private:
+        float _padding;
+    };
+
     struct Illumination {
-        DirectionalLight directionalLights[8];
+        static const uint32_t maxDirectionalLights = 8;
+        static const uint32_t maxPointLights = 16;
+        DirectionalLight directionalLights[maxDirectionalLights];
         uint32_t directionalLightCount = 0;
+        PointLight pointLights[maxPointLights];
+        uint32_t pointLightCount = 0;
     };
 
     struct FragmentUbo {
