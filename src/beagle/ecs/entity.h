@@ -149,6 +149,9 @@ public:
     T* operator->() { return m_data; }
     const T* operator->() const { return m_data; }
 
+    T& operator*() { return *m_data; }
+    const T& operator*() const { return *m_data; }
+
     Entity owner() { return m_owner; }
     Entity owner() const { return m_owner; }
 
