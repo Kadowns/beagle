@@ -8,34 +8,6 @@
 using namespace beagle;
 
 
-CameraUploadSystem::CameraUploadSystem(EntityManager* entities) : BaseJob("CameraUpdateSystem"){
-    m_listener.attach(&entities->event_bus());
-    m_listener.receive<OnCameraUpdate>(this);
-    m_manager = entities;
-}
-
-void CameraUploadSystem::execute() {
-    if (m_dirtyCameras.empty()){
-        return;
-    }
-
-    CameraUniform ubo{};
-
-    for (auto entityId : m_dirtyCameras) {
-        auto[camera, projection, transform] = m_manager->entity_from_id(entityId).components<Camera, CameraProjection, Transform>();
-        ubo.vp = projection->matrix * transform->inverseMatrix;
-        auto cameraUbo = camera->ubo.lock();
-        cameraUbo->copy_from(&ubo, sizeof(ubo), 0);
-        cameraUbo->upload();
-    }
-    m_dirtyCameras.clear();
-}
-
-bool CameraUploadSystem::receive(const OnCameraUpdate& ev) {
-    m_dirtyCameras.insert(ev.entityId);
-    return false;
-}
-
 CameraOrthographicSystem::CameraOrthographicSystem(EntityManager* entities, float width, float height) : BaseJob("CameraOrthographicSystem") {
     m_eventBus = &entities->event_bus();
     m_width = width;
