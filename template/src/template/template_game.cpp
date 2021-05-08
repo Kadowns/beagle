@@ -11,6 +11,8 @@
 #include <beagle/ecs/systems/transform_system.h>
 #include <beagle/ecs/systems/camera_system.h>
 #include <beagle/ecs/systems/render_system.h>
+#include <beagle/ecs/systems/mesh_system.h>
+#include <beagle/ecs/components/light.h>
 
 TemplateGame::TemplateGame() {
     EG_LOG_CREATE("template");
@@ -26,48 +28,96 @@ void TemplateGame::init(beagle::Engine* engine) {
 
     struct Vertex {
         glm::vec3 position;
-        glm::vec4 color;
         glm::vec2 texCoord;
+        glm::vec3 normal;
     };
+
+
+    auto pi = 3.141592;
+
+    const size_t resolution = 20;
+    std::vector<Vertex> sphereVertices;
+
+    for (uint32_t slice = 0; slice <= resolution; slice++) {
+        auto theta = slice *  pi / resolution;
+        auto sinTheta = sinf(theta);
+        auto cosTheta = cosf(theta);
+
+        for (uint32_t stack = 0; stack <= resolution; stack++) {
+            auto phi = stack * 2 * pi / resolution;
+            auto sinPhi = sinf(phi);
+            auto cosPhi = cosf(phi);
+            auto x = (float)(cosPhi * sinTheta);
+            auto y = (float)(cosTheta);
+            auto z = (float)(sinPhi * sinTheta);
+            auto s = 1.0f - ((float)stack / (float)resolution);
+            auto t = 1.0f - ((float)slice / (float)resolution);
+            auto position = glm::vec3(x, y, z);
+            auto normal = glm::normalize(position);
+            sphereVertices.emplace_back(Vertex{position, glm::vec2(s, t), normal});
+        }
+    }
+
+    std::vector<uint32_t> sphereIndices;
+    for (int z = 0; z <= resolution; z++) {
+        for (int x = 0; x <= resolution; x++) {
+            uint32_t zero = x + z * resolution;
+            uint32_t one = (x + 1) + z * resolution;
+            uint32_t two = x + (z + 1) * resolution;
+            uint32_t three = (x + 1) + (z + 1) * resolution;
+
+            sphereIndices.push_back(zero);
+            sphereIndices.push_back(one);
+            sphereIndices.push_back(three);
+
+            sphereIndices.push_back(zero);
+            sphereIndices.push_back(three);
+            sphereIndices.push_back(two);
+        }
+    }
+
+    auto sphereMesh = engine->asset_manager().mesh_pool().insert(sphereVertices, sphereIndices);
+
+
 
     struct Cube {
 
         std::array<Vertex, 24> vertices = {
                 //up
-                Vertex{glm::vec3(-1.0f, -1.0f, -1.0f), glm::vec4(1.0f, 1.0f, 0.5f, 1.0f), glm::vec2(0.0f, 0.0f)},
-                Vertex{glm::vec3(-1.0f, -1.0f, 1.0f), glm::vec4(1.0f, 1.0f, 0.5f, 1.0f), glm::vec2(1.0f, 0.0f)},
-                Vertex{glm::vec3(1.0f, -1.0f, 1.0f), glm::vec4(1.0f, 1.0f, 0.5f, 1.0f), glm::vec2(0.0f, 1.0f)},
-                Vertex{glm::vec3(1.0f, -1.0f, -1.0f), glm::vec4(1.0f, 1.0f, 0.5f, 1.0f), glm::vec2(1.0f, 1.0f)},
+                Vertex{glm::vec3(-1.0f, -1.0f, -1.0f), glm::vec2(0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f)},
+                Vertex{glm::vec3(-1.0f, -1.0f, 1.0f), glm::vec2(1.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f)},
+                Vertex{glm::vec3(1.0f, -1.0f, 1.0f), glm::vec2(0.0f, 1.0f), glm::vec3(0.0f, -1.0f, 0.0f)},
+                Vertex{glm::vec3(1.0f, -1.0f, -1.0f), glm::vec2(1.0f, 1.0f), glm::vec3(0.0f, -1.0f, 0.0f)},
 
                 //down
-                Vertex{glm::vec3(-1.0f, 1.0f, -1.0f), glm::vec4(1.0f, 0.5f, 1.0f, 1.0f), glm::vec2(0.0f, 0.0f)},
-                Vertex{glm::vec3(-1.0f, 1.0f, 1.0f), glm::vec4(1.0f, 0.5f, 1.0f, 1.0f), glm::vec2(1.0f, 0.0f)},
-                Vertex{glm::vec3(1.0f, 1.0f, 1.0f), glm::vec4(1.0f, 0.5f, 1.0f, 1.0f), glm::vec2(0.0f, 1.0f)},
-                Vertex{glm::vec3(1.0f, 1.0f, -1.0f), glm::vec4(1.0f, 0.5f, 1.0f, 1.0f), glm::vec2(1.0f, 1.0f)},
+                Vertex{glm::vec3(-1.0f, 1.0f, -1.0f), glm::vec2(0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f)},
+                Vertex{glm::vec3(-1.0f, 1.0f, 1.0f), glm::vec2(1.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f)},
+                Vertex{glm::vec3(1.0f, 1.0f, 1.0f), glm::vec2(0.0f, 1.0f), glm::vec3(0.0f, 1.0f, 0.0f)},
+                Vertex{glm::vec3(1.0f, 1.0f, -1.0f), glm::vec2(1.0f, 1.0f), glm::vec3(0.0f, 1.0f, 0.0f)},
 
                 //left
-                Vertex{glm::vec3(-1.0f, -1.0f, -1.0f), glm::vec4(0.0f, 1.0f, 1.0f, 1.0f), glm::vec2(0.0f, 0.0f)},
-                Vertex{glm::vec3(-1.0f, -1.0f, 1.0f), glm::vec4(0.0f, 1.0f, 1.0f, 1.0f), glm::vec2(1.0f, 0.0f)},
-                Vertex{glm::vec3(-1.0f, 1.0f, 1.0f), glm::vec4(0.0f, 1.0f, 1.0f, 1.0f), glm::vec2(0.0f, 1.0f)},
-                Vertex{glm::vec3(-1.0f, 1.0f, -1.0f), glm::vec4(0.0f, 1.0f, 1.0f, 1.0f), glm::vec2(1.0f, 1.0f)},
+                Vertex{glm::vec3(-1.0f, -1.0f, -1.0f), glm::vec2(0.0f, 0.0f), glm::vec3(1.0f, 0.0f, 0.0f)},
+                Vertex{glm::vec3(-1.0f, -1.0f, 1.0f), glm::vec2(1.0f, 0.0f), glm::vec3(1.0f, 0.0f, 0.0f)},
+                Vertex{glm::vec3(-1.0f, 1.0f, 1.0f), glm::vec2(0.0f, 1.0f), glm::vec3(1.0f, 0.0f, 0.0f)},
+                Vertex{glm::vec3(-1.0f, 1.0f, -1.0f), glm::vec2(1.0f, 1.0f), glm::vec3(1.0f, 0.0f, 0.0f)},
 
                 //right
-                Vertex{glm::vec3(1.0f, -1.0f, -1.0f), glm::vec4(1.0f, 0.0f, 0.5f, 1.0f), glm::vec2(0.0f, 0.0f)},
-                Vertex{glm::vec3(1.0f, -1.0f, 1.0f), glm::vec4(1.0f, 0.0f, 0.5f, 1.0f), glm::vec2(1.0f, 0.0f)},
-                Vertex{glm::vec3(1.0f, 1.0f, 1.0f), glm::vec4(1.0f, 0.0f, 0.5f, 1.0f), glm::vec2(0.0f, 1.0f)},
-                Vertex{glm::vec3(1.0f, 1.0f, -1.0f), glm::vec4(1.0f, 0.0f, 0.5f, 1.0f), glm::vec2(1.0f, 1.0f)},
+                Vertex{glm::vec3(1.0f, -1.0f, -1.0f), glm::vec2(0.0f, 0.0f), glm::vec3(1.0f, 0.0f, 0.0f)},
+                Vertex{glm::vec3(1.0f, -1.0f, 1.0f), glm::vec2(1.0f, 0.0f), glm::vec3(1.0f, 0.0f, 0.0f)},
+                Vertex{glm::vec3(1.0f, 1.0f, 1.0f), glm::vec2(0.0f, 1.0f), glm::vec3(1.0f, 0.0f, 0.0f)},
+                Vertex{glm::vec3(1.0f, 1.0f, -1.0f), glm::vec2(1.0f, 1.0f), glm::vec3(1.0f, 0.0f, 0.0f)},
 
                 //front
-                Vertex{glm::vec3(-1.0f, -1.0f, 1.0f), glm::vec4(0.0f, 1.0f, 0.5f, 1.0f), glm::vec2(0.0f, 0.0f)},
-                Vertex{glm::vec3(-1.0f, 1.0f, 1.0f), glm::vec4(0.0f, 1.0f, 0.5f, 1.0f), glm::vec2(1.0f, 0.0f)},
-                Vertex{glm::vec3(1.0f, 1.0f, 1.0f), glm::vec4(0.0f, 1.0f, 0.5f, 1.0f), glm::vec2(0.0f, 1.0f)},
-                Vertex{glm::vec3(1.0f, -1.0f, 1.0f), glm::vec4(0.0f, 1.0f, 0.5f, 1.0f), glm::vec2(1.0f, 1.0f)},
+                Vertex{glm::vec3(-1.0f, -1.0f, 1.0f), glm::vec2(0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f)},
+                Vertex{glm::vec3(-1.0f, 1.0f, 1.0f), glm::vec2(1.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f)},
+                Vertex{glm::vec3(1.0f, 1.0f, 1.0f), glm::vec2(0.0f, 1.0f), glm::vec3(0.0f, 0.0f, 1.0f)},
+                Vertex{glm::vec3(1.0f, -1.0f, 1.0f), glm::vec2(1.0f, 1.0f), glm::vec3(0.0f, 0.0f, 1.0f)},
 
                 //back
-                Vertex{glm::vec3(-1.0f, -1.0f, -1.0f), glm::vec4(1.0f, 0.6f, 0.5f, 1.0f), glm::vec2(0.0f, 0.0f)},
-                Vertex{glm::vec3(-1.0f, 1.0f, -1.0f), glm::vec4(1.0f, 0.6f, 0.5f, 1.0f), glm::vec2(1.0f, 0.0f)},
-                Vertex{glm::vec3(1.0f, 1.0f, -1.0f), glm::vec4(1.0f, 0.6f, 0.5f, 1.0f), glm::vec2(0.0f, 1.0f)},
-                Vertex{glm::vec3(1.0f, -1.0f, -1.0f), glm::vec4(1.0f, 0.6f, 0.5f, 1.0f), glm::vec2(1.0f, 1.0f)}
+                Vertex{glm::vec3(-1.0f, -1.0f, -1.0f), glm::vec2(0.0f, 0.0f), glm::vec3(0.0f, 0.0f, -1.0f)},
+                Vertex{glm::vec3(-1.0f, 1.0f, -1.0f), glm::vec2(1.0f, 0.0f), glm::vec3(0.0f, 0.0f, -1.0f)},
+                Vertex{glm::vec3(1.0f, 1.0f, -1.0f), glm::vec2(0.0f, 1.0f), glm::vec3(0.0f, 0.0f, -1.0f)},
+                Vertex{glm::vec3(1.0f, -1.0f, -1.0f), glm::vec2(1.0f, 1.0f), glm::vec3(0.0f, 0.0f, -1.0f)}
         };
         std::array<uint32_t, 36> indices = {
                 0, 3, 2, 0, 2, 1, //up
@@ -90,21 +140,21 @@ void TemplateGame::init(beagle::Engine* engine) {
 
     struct Pyramid {
         std::vector<Vertex> vertices {
-                Vertex{glm::vec3(-1.0f, -1.0f, 1.0f), glm::vec4(0.0f, 1.0f, 0.0f, 1.0f), glm::vec2(0.0f, 0.0f)},
-                Vertex{glm::vec3(1.0f, -1.0f, 1.0f), glm::vec4(0.0f, 1.0f, 0.0f, 1.0f), glm::vec2(1.0f, 0.0f)},
-                Vertex{glm::vec3(0.0f, 1.0f, 0.0f), glm::vec4(0.0f, 1.0f, 0.0f, 1.0f), glm::vec2(0.5f, 1.0f)},
+                Vertex{glm::vec3(-1.0f, -1.0f, 1.0f), glm::vec2(0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f)},
+                Vertex{glm::vec3(1.0f, -1.0f, 1.0f), glm::vec2(1.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f)},
+                Vertex{glm::vec3(0.0f, 1.0f, 0.0f), glm::vec2(0.5f, 1.0f), glm::vec3(0.0f, 0.0f, 1.0f)},
 
-                Vertex{glm::vec3(1.0f, -1.0f, 1.0f), glm::vec4(1.0f, 0.0f, 0.0f, 1.0f), glm::vec2(0.0f, 0.0f)},
-                Vertex{glm::vec3(0.0f, -1.0f, -1.0f), glm::vec4(1.0f, 0.0f, 0.0f, 1.0f), glm::vec2(1.0f, 0.0f)},
-                Vertex{glm::vec3(0.0f, 1.0f, 0.0f), glm::vec4(1.0f, 0.0f, 0.0f, 1.0f), glm::vec2(0.5f, 1.0f)},
+                Vertex{glm::vec3(1.0f, -1.0f, 1.0f), glm::vec2(0.0f, 0.0f), glm::vec3(1.0f, 0.0f, 0.0f)},
+                Vertex{glm::vec3(0.0f, -1.0f, -1.0f), glm::vec2(1.0f, 0.0f), glm::vec3(1.0f, 0.0f, 0.0f)},
+                Vertex{glm::vec3(0.0f, 1.0f, 0.0f), glm::vec2(0.5f, 1.0f), glm::vec3(1.0f, 0.0f, 0.0f)},
 
-                Vertex{glm::vec3(0.0f, -1.0f, -1.0f), glm::vec4(0.0f, 0.0f, 1.0f, 1.0f), glm::vec2(0.0f, 0.0f)},
-                Vertex{glm::vec3(-1.0f, -1.0f, 1.0f), glm::vec4(0.0f, 0.0f, 1.0f, 1.0f), glm::vec2(1.0f, 0.0f)},
-                Vertex{glm::vec3(0.0f, 1.0f, 0.0f), glm::vec4(0.0f, 0.0f, 1.0f, 1.0f), glm::vec2(0.5f, 1.0f)},
+                Vertex{glm::vec3(0.0f, -1.0f, -1.0f), glm::vec2(0.0f, 0.0f), glm::vec3(-1.0f, 0.0f, 0.0f)},
+                Vertex{glm::vec3(-1.0f, -1.0f, 1.0f), glm::vec2(1.0f, 0.0f), glm::vec3(-1.0f, 0.0f, 0.0f)},
+                Vertex{glm::vec3(0.0f, 1.0f, 0.0f), glm::vec2(0.5f, 1.0f), glm::vec3(-1.0f, 0.0f, 0.0f)},
 
-                Vertex{glm::vec3(-1.0f, -1.0f, 1.0f), glm::vec4(1.0f, 1.0f, 1.0f, 1.0f), glm::vec2(0.0f, 0.0f)},
-                Vertex{glm::vec3(0.0f, -1.0f, -1.0f), glm::vec4(1.0f, 1.0f, 1.0f, 1.0f), glm::vec2(1.0f, 0.0f)},
-                Vertex{glm::vec3(1.0f, -1.0f, 1.0f), glm::vec4(1.0f, 1.0f, 1.0f, 1.0f), glm::vec2(0.5f, 1.0f)},
+                Vertex{glm::vec3(-1.0f, -1.0f, 1.0f), glm::vec2(0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f)},
+                Vertex{glm::vec3(0.0f, -1.0f, -1.0f), glm::vec2(1.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f)},
+                Vertex{glm::vec3(1.0f, -1.0f, 1.0f), glm::vec2(0.5f, 1.0f), glm::vec3(0.0f, -1.0f, 0.0f)},
         };
         std::vector<uint32_t> indices = {
                 0, 1, 2,
@@ -129,11 +179,11 @@ void TemplateGame::init(beagle::Engine* engine) {
     //position
     shaderCreateInfo.vertexLayout.add(0, eagle::Format::R32G32B32_SFLOAT);
 
-    //color
-    shaderCreateInfo.vertexLayout.add(0, eagle::Format::R32G32B32A32_SFLOAT);
-
     //texcoord
     shaderCreateInfo.vertexLayout.add(0, eagle::Format::R32G32_SFLOAT);
+
+    //normal
+    shaderCreateInfo.vertexLayout.add(0, eagle::Format::R32G32B32_SFLOAT);
 
     //transform matrix
     //build a mat4 using 4 vec4
@@ -141,17 +191,28 @@ void TemplateGame::init(beagle::Engine* engine) {
     shaderCreateInfo.vertexLayout.add(1, eagle::Format::R32G32B32A32_SFLOAT);
     shaderCreateInfo.vertexLayout.add(1, eagle::Format::R32G32B32A32_SFLOAT);
     shaderCreateInfo.vertexLayout.add(1, eagle::Format::R32G32B32A32_SFLOAT);
+
+    //inverse transform
+    shaderCreateInfo.vertexLayout.add(1, eagle::Format::R32G32B32A32_SFLOAT);
+    shaderCreateInfo.vertexLayout.add(1, eagle::Format::R32G32B32A32_SFLOAT);
+    shaderCreateInfo.vertexLayout.add(1, eagle::Format::R32G32B32A32_SFLOAT);
+    shaderCreateInfo.vertexLayout.add(1, eagle::Format::R32G32B32A32_SFLOAT);
+
     shaderCreateInfo.vertexLayout[1].inputRate = eagle::VertexInputRate::INSTANCE;
     shaderCreateInfo.depthTesting = true;
 
     auto wallTexture = engine->asset_manager().texture_pool().insert("images/wall2.png");
 
-    auto shader = engine->asset_manager().shader_pool().insert(shaderCreateInfo, "color");
+    auto shader = engine->asset_manager().shader_pool().insert(shaderCreateInfo, "phong_mesh");
 
     auto material = engine->asset_manager().material_pool().insert(shader);
 
-    glm::vec3 materialColor(1.0f, 1.0f, 1.0f);
+    auto lightMaterial = engine->asset_manager().material_pool().insert(shader);
+    glm::vec3 materialColor(1.0f, 0.0f, 0.0f);
+    lightMaterial->update_uniform(0, &materialColor, sizeof(materialColor));
 
+
+    materialColor = glm::vec3(1.0f, 1.0f, 1.0f);
     material->update_uniform(0, &materialColor, sizeof(materialColor));
     material->update_texture(1, wallTexture);
 
@@ -171,29 +232,35 @@ void TemplateGame::init(beagle::Engine* engine) {
         oscilator->frequency = eagle::Random::value() * 10;
 
         e.assign<beagle::Transform>();
-        e.assign<beagle::MeshRenderer>(pyramidMesh, material);
+        e.assign<beagle::MeshRenderer>(i % 2 ? cubeMesh : i % 5 ? pyramidMesh : sphereMesh, material);
     }
 
     for (int i = 0; i < entityCount; i++){
         auto e = engine->entities().create();
-        auto position = e.assign<beagle::Position>(eagle::Random::range(-range, range), eagle::Random::range(-range, range), eagle::Random::range(-range, range));
+        e.assign<beagle::Position>(eagle::Random::range(-range, range), eagle::Random::range(-range, range), eagle::Random::range(-range, range));
         e.assign<beagle::Rotation>(eagle::Random::range(-20.0f, 20.0f), eagle::Random::range(-20.0f, 20.0f), eagle::Random::range(-20.0f, 20.0f));
-        auto scale = e.assign<beagle::Scale>(eagle::Random::range(0.5f, 2.0f), eagle::Random::range(0.5f, 2.0f), eagle::Random::range(0.5f, 2.0f));
+        e.assign<beagle::Scale>(eagle::Random::range(0.5f, 2.0f), eagle::Random::range(0.5f, 2.0f), eagle::Random::range(0.5f, 2.0f));
         e.assign<Rotator>(glm::vec3(eagle::Random::range(-20.0f, 20.0f), eagle::Random::range(-20.0f, 20.0f), eagle::Random::range(-20.0f, 20.0f)));
-//        auto scaler = e.assign<Scaler>(scale->vec);
-//        scaler->frequency = eagle::Random::value() * 10;
-
-//        auto oscilator = e.assign<Oscilator>(position->vec);
-//        oscilator->frequency = eagle::Random::value() * 10;
 
         e.assign<beagle::Transform>();
-        e.assign<beagle::MeshRenderer>(cubeMesh, material);
+        e.assign<beagle::MeshRenderer>(i % 2 ? cubeMesh : i % 5 ? pyramidMesh : sphereMesh, material);
+    }
+
+    for (int i  = 0; i < 8; i++){
+        auto e = engine->entities().create();
+        e.assign<beagle::Position>(eagle::Random::range(-range, range), eagle::Random::range(-range, range), eagle::Random::range(-range, range));
+        e.assign<beagle::PointLight>();
+        e.assign<beagle::Transform>();
+        e.assign<beagle::MeshRenderer>(sphereMesh, lightMaterial);
     }
 
     auto e = engine->entities().create();
+    e.assign<beagle::DirectionalLight>();
+    e.assign<beagle::Rotation>(30, 90, 0);
+
+    e = engine->entities().create();
     e.assign<beagle::Position>(0.0f, 0.0f, 50.0f);
     e.assign<beagle::Rotation>();
-    e.assign<beagle::Scale>();
     e.assign<beagle::CameraPerspectiveProjection>(glm::radians(60.0f), window.width() / window.height(), 0.1f, 1000.0f);
     e.assign<beagle::CameraProjection>();
     e.assign<beagle::Transform>();
@@ -237,34 +304,38 @@ void TemplateGame::init(beagle::Engine* engine) {
         }
     }, "Scaler");
 
-    auto transformJob = engine->jobs().enqueue<beagle::TransformSystem>(&engine->entities());
+    auto transformJob = engine->jobs().enqueue<beagle::TransformUpdateMatricesJob>(&engine->entities());
     transformJob.run_after(scalerJob);
     transformJob.run_after(oscilatorJob);
     transformJob.run_after(rotatorJob);
 
-    auto buildMeshData = engine->jobs().enqueue<beagle::BuildMeshGroupsJob>(&engine->entities());
-    buildMeshData.run_after(transformJob);
+    auto updateInstanceBufferJob = engine->jobs().enqueue<beagle::MeshFilterUpdateInstanceBufferJob>(&engine->entities());
+    updateInstanceBufferJob.run_after(transformJob);
 
-    auto cameraControllerJob = engine->jobs().enqueue<CameraControlSystem>(&engine->entities(), &engine->timer());
+    auto cameraControllerJob = engine->jobs().enqueue<CameraControlJob>(&engine->entities(), &engine->timer());
     cameraControllerJob.run_before(transformJob);
 
-    auto cameraOrthoJob = engine->jobs().enqueue<beagle::CameraOrthographicSystem>(&engine->entities(), window.width(), window.height());
-    auto cameraPerspectiveJob = engine->jobs().enqueue<beagle::CameraPerspectiveSystem>(&engine->entities(), window.width(), window.height());
-    auto cameraUploadJob = engine->jobs().enqueue<beagle::CameraUploadSystem>(&engine->entities());
-    cameraUploadJob.run_after(cameraOrthoJob);
-    cameraUploadJob.run_after(cameraPerspectiveJob);
-    cameraUploadJob.run_after(transformJob);
+    auto cameraOrthoJob = engine->jobs().enqueue<beagle::CameraUpdateOrthographicProjectionJob>(&engine->entities(), window.width(), window.height());
+    auto cameraPerspectiveJob = engine->jobs().enqueue<beagle::CameraUpdatePerspectiveProjectionJob>(&engine->entities(), window.width(), window.height());
+    auto updateVertexUboJob = engine->jobs().enqueue<beagle::MeshFilterUpdateVertexUboJob>(&engine->entities());
+    updateVertexUboJob.run_after(cameraOrthoJob);
+    updateVertexUboJob.run_after(cameraPerspectiveJob);
+    updateVertexUboJob.run_after(transformJob);
 
+    auto updateFragmentUboJob = engine->jobs().enqueue<beagle::MeshFilterUpdateFragmentUboJob>(&engine->entities());
+//    updateFragmentUboJob.run_after(transformJob);
+    updateFragmentUboJob.run_after(cameraControllerJob);
 
     auto renderBeginJob = engine->jobs().enqueue<beagle::RenderBeginJob>(context);
-    renderBeginJob.run_after(buildMeshData);
-    renderBeginJob.run_after(cameraUploadJob);
+    renderBeginJob.run_after(updateInstanceBufferJob);
+    renderBeginJob.run_after(updateVertexUboJob);
+    renderBeginJob.run_after(updateFragmentUboJob);
 
-    auto renderMeshFilter = engine->jobs().enqueue<beagle::RenderMeshFilterJob>(&engine->entities());
-    renderMeshFilter.run_after(renderBeginJob);
+    auto renderMeshFilterJob = engine->jobs().enqueue<beagle::MeshFilterRenderJob>(&engine->entities());
+    renderMeshFilterJob.run_after(renderBeginJob);
 
     auto renderCameraJob = engine->jobs().enqueue<beagle::RenderCameraJob>(&engine->entities());
-    renderCameraJob.run_after(renderMeshFilter);
+    renderCameraJob.run_after(renderMeshFilterJob);
 
     auto renderEndJob = engine->jobs().enqueue<beagle::RenderEndJob>(context);
     renderEndJob.run_after(renderCameraJob);

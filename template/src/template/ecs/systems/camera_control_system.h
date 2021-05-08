@@ -14,9 +14,9 @@
 
 #include <eagle/timer.h>
 
-class CameraControlSystem : public beagle::BaseJob {
+class CameraControlJob : public beagle::BaseJob {
 public:
-    explicit CameraControlSystem(beagle::EntityManager* manager, eagle::Timer* timer);
+    explicit CameraControlJob(beagle::EntityManager* manager, eagle::Timer* timer);
     void execute() override;
 
 private:
