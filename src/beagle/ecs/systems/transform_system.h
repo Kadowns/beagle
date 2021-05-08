@@ -11,9 +11,9 @@
 
 namespace beagle {
 
-class TransformSystem : public BaseJob {
+class TransformUpdateMatricesJob : public BaseJob {
 public:
-    explicit TransformSystem(EntityManager* manager);
+    explicit TransformUpdateMatricesJob(EntityManager* manager);
     void execute() override;
 
 private:

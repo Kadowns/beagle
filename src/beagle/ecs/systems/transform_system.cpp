@@ -6,11 +6,11 @@
 
 using namespace beagle;
 
-TransformSystem::TransformSystem(EntityManager* manager) : BaseJob("TransformSystem"){
+TransformUpdateMatricesJob::TransformUpdateMatricesJob(EntityManager* manager) : BaseJob("TransformUpdateMatricesJob"){
     m_transformGroup.attach(manager);
 }
 
-void TransformSystem::execute() {
+void TransformUpdateMatricesJob::execute() {
     for (auto[tr] : m_transformGroup) {
         auto entity = tr.owner();
         glm::mat4 matrix(1);
