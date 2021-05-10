@@ -26,6 +26,7 @@ struct Rotation {
 
 struct Scale {
     Scale() : vec(1) {}
+    explicit Scale(float scale) : vec(scale) {}
     explicit Scale(const glm::vec3& scale) : vec(scale) {}
     Scale(float x, float y, float z) : vec(x, y, z) {}
     glm::vec3 vec;
