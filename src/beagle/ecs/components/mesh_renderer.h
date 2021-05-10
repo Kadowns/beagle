@@ -53,7 +53,7 @@ struct MeshFilter {
     };
 
     struct Illumination {
-        static const uint32_t maxDirectionalLights = 8;
+        static const uint32_t maxDirectionalLights = 4;
         static const uint32_t maxPointLights = 16;
         DirectionalLight directionalLights[maxDirectionalLights];
         uint32_t directionalLightCount = 0;
