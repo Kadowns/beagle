@@ -24,9 +24,13 @@ struct MeshFilter {
 
     struct MeshGroup {
         MeshHandle mesh;
-        MaterialHandle material;
         uint32_t instanceCount;
         uint32_t instanceOffset;
+    };
+
+    struct MaterialGroup {
+        MaterialHandle material;
+        std::vector<MeshGroup> meshGroups;
     };
 
     struct VertexUbo {
@@ -91,7 +95,7 @@ struct MeshFilter {
     std::weak_ptr<eagle::DescriptorSet> descriptorSet;
     std::weak_ptr<eagle::DescriptorSetLayout> descriptorSetLayout;
     std::weak_ptr<eagle::UniformBuffer> vertexShaderUbo, fragmentShaderUbo;
-    std::vector<MeshGroup> meshGroups;
+    std::vector<MaterialGroup> materialGroups;
 };
 
 }

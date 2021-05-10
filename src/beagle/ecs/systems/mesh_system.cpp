@@ -41,30 +41,26 @@ MeshFilterUpdateInstanceBufferJob::MeshFilterUpdateInstanceBufferJob(EntityManag
 
 void MeshFilterUpdateInstanceBufferJob::execute() {
 
-    class InstanceDataGroup {
+    class MeshGroup {
     public:
-        InstanceDataGroup() = default;
-        explicit InstanceDataGroup(size_t capacity, MaterialHandle material) :
-                m_buffer((uint8_t*)malloc(capacity)),
-                m_capacity(capacity),
-                m_size(0),
-                m_instanceCount(0),
-                m_material(material){}
 
-        InstanceDataGroup(InstanceDataGroup&& other)  noexcept :
-                m_buffer(other.m_buffer),
-                m_capacity(other.m_capacity),
-                m_size(other.m_size),
-                m_instanceCount(other.m_instanceCount),
-                m_material(other.m_material)
+        MeshGroup() = default;
+        explicit MeshGroup(size_t capacity) :
+        m_buffer((uint8_t*)malloc(capacity)),
+        m_capacity(capacity),
+        m_size(0){}
+
+        MeshGroup(MeshGroup&& other)  noexcept :
+        m_buffer(other.m_buffer),
+        m_capacity(other.m_capacity),
+        m_size(other.m_size)
         {
             other.m_buffer = nullptr;
             other.m_capacity = 0;
             other.m_size = 0;
-            other.m_instanceCount = 0;
         }
 
-        ~InstanceDataGroup() {
+        ~MeshGroup() {
             if (m_buffer){
                 free(m_buffer);
             }
@@ -72,48 +68,91 @@ void MeshFilterUpdateInstanceBufferJob::execute() {
 
         void insert(void* data, size_t size) {
             memcpy(m_buffer + m_size, data, size);
-            m_instanceCount++;
             m_size += size;
         }
+
+        void reserve(size_t capacity){
+            if (m_capacity >= capacity){
+                return;
+            }
+
+            m_capacity = capacity;
+            if (m_buffer){
+                m_buffer = (uint8_t*)realloc(m_buffer, m_capacity);
+                return;
+            }
+
+            m_buffer = (uint8_t*)malloc(m_capacity);
+        }
+
 
         void* data() const { return m_buffer; }
         size_t size() const { return m_size; }
         size_t capacity() const { return m_capacity; }
-        size_t instance_count() const { return m_instanceCount; }
-        const MaterialHandle& material() const { return m_material; }
-
     private:
         uint8_t* m_buffer = nullptr;
         size_t m_capacity = 0;
         size_t m_size = 0;
-        size_t m_instanceCount = 0;
-        MaterialHandle m_material;
     };
 
-    std::map<MeshHandle, InstanceDataGroup> instanceDataGroups;
-    for (auto [transform, renderer] : m_meshRendererGroup){
-        auto& mesh = renderer->mesh;
-        if (instanceDataGroups.find(renderer->mesh) == instanceDataGroups.end()) {
-            InstanceDataGroup dataGroup(m_meshRendererGroup.size() * sizeof(glm::mat4) * 2, renderer->material);
-            instanceDataGroups.emplace(mesh, std::move(dataGroup));
+
+    class MaterialGroup {
+    public:
+        void insert(const MeshHandle& mesh, void* data, size_t size){
+            m_meshBuffers[mesh].insert(data, size);
         }
-        instanceDataGroups[mesh].insert(&transform->matrix, sizeof(glm::mat4) * 2);
+
+        void reserve(const MeshHandle& mesh, size_t size){
+            m_meshBuffers[mesh].reserve(size);
+        }
+
+        std::map<MeshHandle, MeshGroup>::iterator begin() { return m_meshBuffers.begin(); }
+        std::map<MeshHandle, MeshGroup>::iterator end() { return m_meshBuffers.end(); }
+
+    private:
+        std::map<MeshHandle, MeshGroup> m_meshBuffers;
+    };
+
+    struct MaterialGroupCount {
+        std::map<MeshHandle, uint32_t> meshGroupCount;
+    };
+
+    std::map<MaterialHandle, MaterialGroupCount> materialGroupCount;
+    for (auto [transform, renderer] : m_meshRendererGroup){
+        materialGroupCount[renderer->material].meshGroupCount[renderer->mesh]++;
+    }
+
+
+    std::map<MaterialHandle, MaterialGroup> materialGroupsData;
+    for (auto[material, materialGroupCount] : materialGroupCount){
+        auto& materialGroupData = materialGroupsData[material];
+        for (auto[mesh, count] : materialGroupCount.meshGroupCount){
+            materialGroupData.reserve(mesh, count * sizeof(glm::mat4) * 2);
+        }
+    }
+
+    for (auto [transform, renderer] : m_meshRendererGroup){
+        materialGroupsData[renderer->material].insert(renderer->mesh, &transform->matrix, sizeof(glm::mat4) * 2);
     }
 
     for (auto[filter] : m_meshFilterGroup){
-        filter->meshGroups.clear();
+        filter->materialGroups.clear();
         auto ib = filter->instanceBuffer.lock();
         ib->clear();
         ib->reserve(m_meshRendererGroup.size() * sizeof(glm::mat4) * 2);
         size_t instanceOffset = 0;
-        for (auto&[mesh, instanceDataGroup] : instanceDataGroups){
-            ib->insert(instanceDataGroup.data(), instanceDataGroup.size());
-            MeshFilter::MeshGroup group = {mesh};
-            group.material = instanceDataGroup.material();
-            group.instanceCount = instanceDataGroup.instance_count();
-            group.instanceOffset = instanceOffset;
-            instanceOffset += instanceDataGroup.instance_count();
-            filter->meshGroups.emplace_back(group);
+        for (auto&[material, meshBuffers] : materialGroupsData){
+
+            MeshFilter::MaterialGroup materialGroup = {material};
+            for (auto&[mesh, buffer] : meshBuffers){
+                ib->insert(buffer.data(), buffer.size());
+                MeshFilter::MeshGroup meshGroup = {mesh};
+                meshGroup.instanceCount = materialGroupCount[material].meshGroupCount[mesh];
+                meshGroup.instanceOffset = instanceOffset;
+                instanceOffset += meshGroup.instanceCount;
+                materialGroup.meshGroups.emplace_back(meshGroup);
+            }
+            filter->materialGroups.emplace_back(materialGroup);
         }
         ib->upload();
     }
@@ -133,7 +172,7 @@ void MeshFilterUpdateFragmentUboJob::execute() {
         auto& dl = *light;
         auto& rot = *rotation;
         ubo.illumination.directionalLights[ubo.illumination.directionalLightCount].color = glm::vec4(dl.color, dl.intensity);
-        ubo.illumination.directionalLights[ubo.illumination.directionalLightCount].direction = rot.quat * glm::vec3(0.0, 0.0, -1.0);
+        ubo.illumination.directionalLights[ubo.illumination.directionalLightCount].direction = rot.quat * glm::vec3(0.0, 0.0, 1.0);
         ubo.illumination.directionalLightCount++;
         if (ubo.illumination.directionalLightCount >= MeshFilter::Illumination::maxDirectionalLights){
             break;
@@ -178,20 +217,22 @@ void MeshFilterRenderJob::execute() {
         commandBuffer->bind_index_buffer(filter->meshPool->index_buffer());
         commandBuffer->bind_vertex_buffer(filter->meshPool->vertex_buffer(), 0);
         commandBuffer->bind_vertex_buffer(filter->instanceBuffer.lock(), 1);
-        for (auto& group : filter->meshGroups){
-            auto& material = group.material;
+        for (auto& materialGroup : filter->materialGroups){
+            auto& material = materialGroup.material;
             commandBuffer->bind_shader(material->shader()->lock());
             commandBuffer->bind_descriptor_sets(filter->descriptorSet.lock(), 0);
             if (auto descriptorSet = material->descriptor_set()){
                 commandBuffer->bind_descriptor_sets(descriptorSet, 1);
             }
-            commandBuffer->draw_indexed(
-                    group.mesh->index_count(),
-                    group.instanceCount,
-                    group.mesh->first_index(),
-                    group.mesh->vertex_offset(),
-                    group.instanceOffset
-            );
+            for (auto& meshGroup : materialGroup.meshGroups){
+                commandBuffer->draw_indexed(
+                        meshGroup.mesh->index_count(),
+                        meshGroup.instanceCount,
+                        meshGroup.mesh->first_index(),
+                        meshGroup.mesh->vertex_offset(),
+                        meshGroup.instanceOffset
+                );
+            }
         }
 
         commandBuffer->end();
