@@ -15,7 +15,7 @@ struct PointLight {
 };
 
 struct Illumination {
-    DirectionalLight directionalLights[8];
+    DirectionalLight directionalLights[4];
     uint directionalLightCount;
     PointLight pointLights[16];
     uint pointLightCount;

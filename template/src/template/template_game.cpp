@@ -78,45 +78,65 @@ void TemplateGame::init(beagle::Engine* engine) {
 
     auto sphereMesh = engine->asset_manager().mesh_pool().insert(sphereVertices, sphereIndices);
 
+    struct Plane {
+        std::array<Vertex, 4> vertices = {
+                Vertex{glm::vec3(-1.0f, 0.0f, -1.0f), glm::vec2(0.0f, 1.0f), glm::vec3(0.0f, 1.0f, 0.0f)},
+                Vertex{glm::vec3(-1.0f, 0.0f, 1.0f), glm::vec2(0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f)},
+                Vertex{glm::vec3(1.0f, 0.0f, 1.0f), glm::vec2(1.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f)},
+                Vertex{glm::vec3(1.0f, 0.0f, -1.0f), glm::vec2(1.0f, 1.0f), glm::vec3(0.0f, 1.0f, 0.0f)}
+        };
 
+        std::array<uint32_t, 6> indices = {
+                0, 1, 2, 0, 2, 3, //down
+        };
+    } plane;
+
+    auto planeMesh = engine->asset_manager().mesh_pool().insert(
+            plane.vertices.data(),
+            plane.vertices.size(),
+            sizeof(Vertex),
+            plane.indices.data(),
+            plane.indices.size(),
+            sizeof(uint32_t)
+            );
 
     struct Cube {
 
         std::array<Vertex, 24> vertices = {
                 //up
-                Vertex{glm::vec3(-1.0f, -1.0f, -1.0f), glm::vec2(0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f)},
-                Vertex{glm::vec3(-1.0f, -1.0f, 1.0f), glm::vec2(1.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f)},
-                Vertex{glm::vec3(1.0f, -1.0f, 1.0f), glm::vec2(0.0f, 1.0f), glm::vec3(0.0f, -1.0f, 0.0f)},
+                Vertex{glm::vec3(-1.0f, -1.0f, -1.0f), glm::vec2(0.0f, 1.0f), glm::vec3(0.0f, -1.0f, 0.0f)},
+                Vertex{glm::vec3(-1.0f, -1.0f, 1.0f), glm::vec2(0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f)},
+                Vertex{glm::vec3(1.0f, -1.0f, 1.0f), glm::vec2(1.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f)},
                 Vertex{glm::vec3(1.0f, -1.0f, -1.0f), glm::vec2(1.0f, 1.0f), glm::vec3(0.0f, -1.0f, 0.0f)},
 
                 //down
-                Vertex{glm::vec3(-1.0f, 1.0f, -1.0f), glm::vec2(0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f)},
-                Vertex{glm::vec3(-1.0f, 1.0f, 1.0f), glm::vec2(1.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f)},
-                Vertex{glm::vec3(1.0f, 1.0f, 1.0f), glm::vec2(0.0f, 1.0f), glm::vec3(0.0f, 1.0f, 0.0f)},
+                Vertex{glm::vec3(-1.0f, 1.0f, -1.0f), glm::vec2(0.0f, 1.0f), glm::vec3(0.0f, 1.0f, 0.0f)},
+                Vertex{glm::vec3(-1.0f, 1.0f, 1.0f), glm::vec2(0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f)},
+                Vertex{glm::vec3(1.0f, 1.0f, 1.0f), glm::vec2(1.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f)},
                 Vertex{glm::vec3(1.0f, 1.0f, -1.0f), glm::vec2(1.0f, 1.0f), glm::vec3(0.0f, 1.0f, 0.0f)},
 
                 //left
-                Vertex{glm::vec3(-1.0f, -1.0f, -1.0f), glm::vec2(0.0f, 0.0f), glm::vec3(1.0f, 0.0f, 0.0f)},
-                Vertex{glm::vec3(-1.0f, -1.0f, 1.0f), glm::vec2(1.0f, 0.0f), glm::vec3(1.0f, 0.0f, 0.0f)},
-                Vertex{glm::vec3(-1.0f, 1.0f, 1.0f), glm::vec2(0.0f, 1.0f), glm::vec3(1.0f, 0.0f, 0.0f)},
+                Vertex{glm::vec3(-1.0f, -1.0f, -1.0f), glm::vec2(0.0f, 1.0f), glm::vec3(1.0f, 0.0f, 0.0f)},
+                Vertex{glm::vec3(-1.0f, -1.0f, 1.0f), glm::vec2(0.0f, 0.0f), glm::vec3(1.0f, 0.0f, 0.0f)},
+                Vertex{glm::vec3(-1.0f, 1.0f, 1.0f), glm::vec2(1.0f, 0.0f), glm::vec3(1.0f, 0.0f, 0.0f)},
                 Vertex{glm::vec3(-1.0f, 1.0f, -1.0f), glm::vec2(1.0f, 1.0f), glm::vec3(1.0f, 0.0f, 0.0f)},
 
                 //right
-                Vertex{glm::vec3(1.0f, -1.0f, -1.0f), glm::vec2(0.0f, 0.0f), glm::vec3(1.0f, 0.0f, 0.0f)},
-                Vertex{glm::vec3(1.0f, -1.0f, 1.0f), glm::vec2(1.0f, 0.0f), glm::vec3(1.0f, 0.0f, 0.0f)},
-                Vertex{glm::vec3(1.0f, 1.0f, 1.0f), glm::vec2(0.0f, 1.0f), glm::vec3(1.0f, 0.0f, 0.0f)},
+                Vertex{glm::vec3(1.0f, -1.0f, -1.0f), glm::vec2(0.0f, 1.0f), glm::vec3(1.0f, 0.0f, 0.0f)},
+                Vertex{glm::vec3(1.0f, -1.0f, 1.0f), glm::vec2(0.0f, 0.0f), glm::vec3(1.0f, 0.0f, 0.0f)},
+                Vertex{glm::vec3(1.0f, 1.0f, 1.0f), glm::vec2(1.0f, 0.0f), glm::vec3(1.0f, 0.0f, 0.0f)},
                 Vertex{glm::vec3(1.0f, 1.0f, -1.0f), glm::vec2(1.0f, 1.0f), glm::vec3(1.0f, 0.0f, 0.0f)},
 
                 //front
-                Vertex{glm::vec3(-1.0f, -1.0f, 1.0f), glm::vec2(0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f)},
-                Vertex{glm::vec3(-1.0f, 1.0f, 1.0f), glm::vec2(1.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f)},
-                Vertex{glm::vec3(1.0f, 1.0f, 1.0f), glm::vec2(0.0f, 1.0f), glm::vec3(0.0f, 0.0f, 1.0f)},
+                Vertex{glm::vec3(-1.0f, -1.0f, 1.0f), glm::vec2(0.0f, 1.0f), glm::vec3(0.0f, 0.0f, 1.0f)},
+                Vertex{glm::vec3(-1.0f, 1.0f, 1.0f), glm::vec2(0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f)},
+                Vertex{glm::vec3(1.0f, 1.0f, 1.0f), glm::vec2(1.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f)},
                 Vertex{glm::vec3(1.0f, -1.0f, 1.0f), glm::vec2(1.0f, 1.0f), glm::vec3(0.0f, 0.0f, 1.0f)},
 
                 //back
-                Vertex{glm::vec3(-1.0f, -1.0f, -1.0f), glm::vec2(0.0f, 0.0f), glm::vec3(0.0f, 0.0f, -1.0f)},
-                Vertex{glm::vec3(-1.0f, 1.0f, -1.0f), glm::vec2(1.0f, 0.0f), glm::vec3(0.0f, 0.0f, -1.0f)},
-                Vertex{glm::vec3(1.0f, 1.0f, -1.0f), glm::vec2(0.0f, 1.0f), glm::vec3(0.0f, 0.0f, -1.0f)},
+                Vertex{glm::vec3(-1.0f, -1.0f, -1.0f), glm::vec2(0.0f, 1.0f), glm::vec3(0.0f, 0.0f, -1.0f)},
+                Vertex{glm::vec3(-1.0f, 1.0f, -1.0f), glm::vec2(0.0f, 0.0f), glm::vec3(0.0f, 0.0f, -1.0f)},
+                Vertex{glm::vec3(1.0f, 1.0f, -1.0f), glm::vec2(1.0f, 0.0f), glm::vec3(0.0f, 0.0f, -1.0f)},
                 Vertex{glm::vec3(1.0f, -1.0f, -1.0f), glm::vec2(1.0f, 1.0f), glm::vec3(0.0f, 0.0f, -1.0f)}
         };
         std::array<uint32_t, 36> indices = {
@@ -172,8 +192,8 @@ void TemplateGame::init(beagle::Engine* engine) {
     eagle::ShaderCreateInfo shaderCreateInfo = {
             context->main_render_pass(),
             {
-                    {eagle::ShaderStage::FRAGMENT, "shaders/color.frag.spv"},
-                    {eagle::ShaderStage::VERTEX, "shaders/color.vert.spv"},
+                    {eagle::ShaderStage::FRAGMENT, "shaders/mesh_phong.frag.spv"},
+                    {eagle::ShaderStage::VERTEX, "shaders/mesh.vert.spv"},
             }
     };
     //position
@@ -201,13 +221,20 @@ void TemplateGame::init(beagle::Engine* engine) {
     shaderCreateInfo.vertexLayout[1].inputRate = eagle::VertexInputRate::INSTANCE;
     shaderCreateInfo.depthTesting = true;
 
-    auto wallTexture = engine->asset_manager().texture_pool().insert("images/wall2.png");
+    auto wallTexture = engine->asset_manager().texture_pool().insert("images/wall.jpg");
+    auto woodTexture = engine->asset_manager().texture_pool().insert("images/wood.png");
 
     auto shader = engine->asset_manager().shader_pool().insert(shaderCreateInfo, "phong_mesh");
 
-    auto material = engine->asset_manager().material_pool().insert(shader);
 
-    auto lightMaterial = engine->asset_manager().material_pool().insert(shader);
+    auto material = engine->asset_manager().material_pool().insert(shader);
+    auto woodMaterial = engine->asset_manager().material_pool().insert(shader);
+
+
+
+    shaderCreateInfo.shaderStages[eagle::ShaderStage::FRAGMENT] = "shaders/mesh_color.frag.spv";
+    auto colorShader = engine->asset_manager().shader_pool().insert(shaderCreateInfo, "color_mesh");
+    auto lightMaterial = engine->asset_manager().material_pool().insert(colorShader);
     glm::vec3 materialColor(1.0f, 0.0f, 0.0f);
     lightMaterial->update_uniform(0, &materialColor, sizeof(materialColor));
 
@@ -215,8 +242,10 @@ void TemplateGame::init(beagle::Engine* engine) {
     materialColor = glm::vec3(1.0f, 1.0f, 1.0f);
     material->update_uniform(0, &materialColor, sizeof(materialColor));
     material->update_texture(1, wallTexture);
+    woodMaterial->update_uniform(0, &materialColor, sizeof(materialColor));
+    woodMaterial->update_texture(1, woodTexture);
 
-    const int entityCount = 100;
+    const int entityCount = 1000;
     const float range = 30.0f;
 
     for (int i = 0; i < entityCount; i++){
@@ -248,18 +277,28 @@ void TemplateGame::init(beagle::Engine* engine) {
 
     for (int i  = 0; i < 8; i++){
         auto e = engine->entities().create();
-        e.assign<beagle::Position>(eagle::Random::range(-range, range), eagle::Random::range(-range, range), eagle::Random::range(-range, range));
-        e.assign<beagle::PointLight>();
+        auto position = e.assign<beagle::Position>(eagle::Random::range(-range, range), eagle::Random::range(-range, range), eagle::Random::range(-range, range));
+        e.assign<beagle::PointLight>(glm::vec3(1.0f, 0.0f, 0.0f));
+        e.assign<beagle::Scale>(0.5f);
         e.assign<beagle::Transform>();
+        auto oscilator = e.assign<Oscilator>(position->vec);
+        oscilator->frequency = eagle::Random::value() * 10;
         e.assign<beagle::MeshRenderer>(sphereMesh, lightMaterial);
     }
 
     auto e = engine->entities().create();
+    e.assign<beagle::MeshRenderer>(planeMesh, woodMaterial);
+    e.assign<beagle::Position>(0, -5, 0);
+    e.assign<beagle::Scale>(40, 1, 40);
+    e.assign<beagle::Transform>();
+
+    e = engine->entities().create();
     e.assign<beagle::DirectionalLight>();
-    e.assign<beagle::Rotation>(30, 90, 0);
+    e.assign<beagle::Rotation>(30, 40, 0);
 
     e = engine->entities().create();
     e.assign<beagle::Position>(0.0f, 0.0f, 50.0f);
+//    e.assign<beagle::DirectionalLight>(glm::vec3(0.0f, 0.0f, 1.0f));
     e.assign<beagle::Rotation>();
     e.assign<beagle::CameraPerspectiveProjection>(glm::radians(60.0f), window.width() / window.height(), 0.1f, 1000.0f);
     e.assign<beagle::CameraProjection>();
@@ -299,7 +338,7 @@ void TemplateGame::init(beagle::Engine* engine) {
             auto amplitude = osc->amplitude;
             auto frequency = osc->frequency;
             auto scale = tr->vec;
-            scale = glm::vec3(1) * (sinf(frequency * t) * amplitude);
+            scale = glm::vec3(1) * abs((sinf(frequency * t) * amplitude));
             tr->vec = scale;
         }
     }, "Scaler");

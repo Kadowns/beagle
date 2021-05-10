@@ -16,8 +16,9 @@ target_include_directories(${APP_NAME_LIB} PUBLIC src)
 target_link_libraries(${APP_NAME_LIB} PUBLIC beagle)
 
 set(SHADERS
-        assets/shaders/color.frag
-        assets/shaders/color.vert
+        assets/shaders/mesh_phong.frag
+        assets/shaders/mesh.vert
+        assets/shaders/mesh_color.frag
         )
 
 foreach (SHADER ${SHADERS})

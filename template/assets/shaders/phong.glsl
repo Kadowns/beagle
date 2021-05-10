@@ -19,10 +19,10 @@ vec3 calculate_directional_light_phong(in DirectionalLight light, in vec3 positi
 vec3 calculate_point_light_phong(in PointLight light, in vec3 position, in vec3 normal, in vec3 viewDirection) {
     float distance = length(light.position - position);
     float attenuation = 1.0 / (light.constant + light.linear * distance + light.quadratic * (distance * distance));
-    vec3 lightDirection = (position - light.position) / distance;
+    vec3 lightDirection = (light.position - position) / distance;
 
     float diff = max(dot(normal, lightDirection), 0.0);
-    vec3 diffuse = diff * light.color.xyz * light.color.w * attenuation;
+    vec3 diffuse = diff * light.color.xyz * attenuation;
 
     vec3 reflectDir = reflect(-lightDirection, normal);
     float spec = pow(max(dot(viewDirection, reflectDir), 0.0), 32);
