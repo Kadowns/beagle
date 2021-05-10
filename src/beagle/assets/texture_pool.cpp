@@ -3,6 +3,7 @@
 //
 
 #include <stb_image.h>
+#include <eagle/file_system.h>
 #include "texture_pool.h"
 
 using namespace beagle;
@@ -36,9 +37,13 @@ TextureHandle TexturePool::default_texture() {
 }
 
 TextureHandle TexturePool::insert(const std::string& filepath) {
+
+    auto bytes = eagle::FileSystem::instance()->read_bytes(filepath);
+
     eagle::TextureCreateInfo textureCreateInfo = {};
     int width, height, bpp;
-    auto buffer = (uint8_t*) stbi_load(filepath.c_str(), &width, &height, &bpp, STBI_rgb_alpha);
+
+    auto buffer = (uint8_t*) stbi_load_from_memory(bytes.data(), bytes.size(), &width, &height, &bpp, STBI_rgb_alpha);
     if (!buffer) {
         throw std::runtime_error("Failed to load image: " + std::string(stbi_failure_reason()));
     }
@@ -46,23 +51,6 @@ TextureHandle TexturePool::insert(const std::string& filepath) {
     textureCreateInfo.imageCreateInfo.width = width;
     textureCreateInfo.imageCreateInfo.height = height;
     int len = width * height * 4;
-
-    if (bpp == 3){
-        auto tempBuffer = (uint8_t*)malloc(len);
-        uint8_t* rgba = tempBuffer;
-        uint8_t* rgb = buffer;
-        for (size_t i = 0; i < width * height; ++i) {
-            memcpy(rgba, rgb, sizeof(uint8_t) * 3);
-//            memset(rgba + 3, 255, sizeof(uint8_t));
-            rgba += 4;
-            rgb += 3;
-        }
-
-        auto aux = buffer;
-        buffer = tempBuffer;
-        stbi_image_free(aux);
-    }
-
 
     textureCreateInfo.imageCreateInfo.bufferData.resize(len);
     memcpy(textureCreateInfo.imageCreateInfo.bufferData.data(), buffer, len);
