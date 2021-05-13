@@ -29,7 +29,7 @@ private:
 private:
     ShaderHandle m_shader;
     std::weak_ptr<eagle::DescriptorSet> m_descriptorSet;
-
+    std::unordered_map<size_t, eagle::DescriptorBindingDescription> m_bindingDescriptions;
 };
 
 class MaterialHandle;

@@ -30,6 +30,7 @@ Material::Material(eagle::RenderingContext* context, const ShaderHandle& shader,
                 descriptor = *defaultTexture;
                 break;
         }
+        m_bindingDescriptions.emplace(binding.binding, binding);
         descriptors.emplace_back(descriptor);
     }
     m_descriptorSet = context->create_descriptor_set(descriptorSetLayout, descriptors);
