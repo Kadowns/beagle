@@ -183,11 +183,8 @@ void MeshFilterUpdateFragmentUboJob::execute() {
         auto& pl = *light;
         auto& pos = *position;
 
-        ubo.illumination.pointLights[ubo.illumination.pointLightCount].color = glm::vec4(pl.color, 1.0f);
+        ubo.illumination.pointLights[ubo.illumination.pointLightCount].color = glm::vec4(pl.color, pl.intensity);
         ubo.illumination.pointLights[ubo.illumination.pointLightCount].position = pos.vec;
-        ubo.illumination.pointLights[ubo.illumination.pointLightCount].constant = pl.constant;
-        ubo.illumination.pointLights[ubo.illumination.pointLightCount].linear = pl.linear;
-        ubo.illumination.pointLights[ubo.illumination.pointLightCount].quadratic = pl.quadratic;
         ubo.illumination.pointLightCount++;
         if (ubo.illumination.pointLightCount >= MeshFilter::Illumination::maxPointLights){
             break;

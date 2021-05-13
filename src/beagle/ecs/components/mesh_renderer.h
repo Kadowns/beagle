@@ -45,11 +45,6 @@ struct MeshFilter {
     struct PointLight {
         glm::vec4 color;
         alignas(16) glm::vec3 position;
-        float constant;
-        float linear;
-        float quadratic;
-    private:
-        float _padding;
     };
 
     struct Illumination {
