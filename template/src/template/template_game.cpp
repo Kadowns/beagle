@@ -192,8 +192,8 @@ void TemplateGame::init(beagle::Engine* engine) {
     eagle::ShaderCreateInfo shaderCreateInfo = {
             context->main_render_pass(),
             {
-                    {eagle::ShaderStage::FRAGMENT, "shaders/mesh_phong.frag.spv"},
                     {eagle::ShaderStage::VERTEX, "shaders/mesh.vert.spv"},
+                    {eagle::ShaderStage::FRAGMENT, "shaders/pbr/pbr_mesh.frag.spv"},
             }
     };
     //position
@@ -221,74 +221,88 @@ void TemplateGame::init(beagle::Engine* engine) {
     shaderCreateInfo.vertexLayout[1].inputRate = eagle::VertexInputRate::INSTANCE;
     shaderCreateInfo.depthTesting = true;
 
-    auto wallTexture = engine->asset_manager().texture_pool().insert("images/wall.jpg");
+    auto metalMeshAlbedo = engine->asset_manager().texture_pool().insert("images/metal/Metal_Mesh_006_basecolor.jpg");
+    auto metalMeshMetallic = engine->asset_manager().texture_pool().insert("images/metal/Metal_Mesh_006_metallic.jpg");
+    auto metalMeshRoughness = engine->asset_manager().texture_pool().insert("images/metal/Metal_Mesh_006_roughness.jpg");
+    auto metalMeshAO = engine->asset_manager().texture_pool().insert("images/metal/Metal_Mesh_006_ambientOcclusion.jpg");
     auto woodTexture = engine->asset_manager().texture_pool().insert("images/wood.png");
 
-    auto shader = engine->asset_manager().shader_pool().insert(shaderCreateInfo, "phong_mesh");
+    auto shader = engine->asset_manager().shader_pool().insert(shaderCreateInfo, "pbr");
 
 
-    auto material = engine->asset_manager().material_pool().insert(shader);
+    struct MaterialData {
+        alignas(16) glm::vec4 albedo;
+        float metallic;
+        float roughness;
+        float ao;
+    };
+
+
+
+    auto metalicMaterial = engine->asset_manager().material_pool().insert(shader);
     auto woodMaterial = engine->asset_manager().material_pool().insert(shader);
 
-
-
-    shaderCreateInfo.shaderStages[eagle::ShaderStage::FRAGMENT] = "shaders/mesh_color.frag.spv";
-    auto colorShader = engine->asset_manager().shader_pool().insert(shaderCreateInfo, "color_mesh");
+    shaderCreateInfo.shaderStages[eagle::ShaderStage::FRAGMENT] = "shaders/mesh.frag.spv";
+    auto colorShader = engine->asset_manager().shader_pool().insert(shaderCreateInfo, "default");
     auto lightMaterial = engine->asset_manager().material_pool().insert(colorShader);
-    glm::vec3 materialColor(1.0f, 0.0f, 0.0f);
-    lightMaterial->update_uniform(0, &materialColor, sizeof(materialColor));
+
+    lightMaterial->update_uniform(0, glm::vec3(1.0f));
 
 
-    materialColor = glm::vec3(1.0f, 1.0f, 1.0f);
-    material->update_uniform(0, &materialColor, sizeof(materialColor));
-    material->update_texture(1, wallTexture);
-    woodMaterial->update_uniform(0, &materialColor, sizeof(materialColor));
+    metalicMaterial->update_uniform(0, MaterialData{glm::vec4(0.7f, 0.3f, 0.3f, 1.0f), 1.0f, 0.7f, 0.2f});
+//    material->update_texture(1, wallTexture);
+//    metalicMaterial->update_texture(1, wallTexture);
+    woodMaterial->update_uniform(0, MaterialData{glm::vec4(0.2f, 0.7f, 0.5f, 1.0f), 0.1f, 0.6f, 8.0f});
     woodMaterial->update_texture(1, woodTexture);
 
-    const int entityCount = 1000;
+    const int entityCount = 100;
     const float range = 30.0f;
 
     for (int i = 0; i < entityCount; i++){
+
+        auto material = engine->asset_manager().material_pool().insert(shader);
+        float metallic = (float)(i % 10) / 9;
+        float roughness = (float)(i / 10) / 9;
+        material->update_uniform(0, MaterialData{glm::vec4(1.0f), metallic, roughness, 1.0f});
+        material->update_texture(1, metalMeshAlbedo);
+        material->update_texture(2, metalMeshMetallic);
+        material->update_texture(3, metalMeshRoughness);
+        material->update_texture(4, metalMeshAO);
+
         auto e = engine->entities().create();
-        auto position = e.assign<beagle::Position>(eagle::Random::range(-range, range), eagle::Random::range(-range, range), eagle::Random::range(-range, range));
-        e.assign<beagle::Rotation>(eagle::Random::range(-20.0f, 20.0f), eagle::Random::range(-20.0f, 20.0f), eagle::Random::range(-20.0f, 20.0f));
-        auto scale = e.assign<beagle::Scale>(eagle::Random::range(0.5f, 2.0f), eagle::Random::range(0.5f, 2.0f), eagle::Random::range(0.5f, 2.0f));
+        e.assign<beagle::Position>((i % 10) * 3, (i / 10) * 3, 0);
+        e.assign<beagle::Rotation>();
+        e.assign<beagle::Scale>();
         e.assign<Rotator>(glm::vec3(eagle::Random::range(-20.0f, 20.0f), eagle::Random::range(-20.0f, 20.0f), eagle::Random::range(-20.0f, 20.0f)));
-        auto scaler = e.assign<Scaler>(scale->vec);
-        scaler->frequency = eagle::Random::value() * 10;
-
-        auto oscilator = e.assign<Oscilator>(position->vec);
-        oscilator->frequency = eagle::Random::value() * 10;
-
         e.assign<beagle::Transform>();
-        e.assign<beagle::MeshRenderer>(i % 2 ? cubeMesh : i % 5 ? pyramidMesh : sphereMesh, material);
+        e.assign<beagle::MeshRenderer>(sphereMesh, material);
     }
 
-    for (int i = 0; i < entityCount; i++){
-        auto e = engine->entities().create();
-        e.assign<beagle::Position>(eagle::Random::range(-range, range), eagle::Random::range(-range, range), eagle::Random::range(-range, range));
-        e.assign<beagle::Rotation>(eagle::Random::range(-20.0f, 20.0f), eagle::Random::range(-20.0f, 20.0f), eagle::Random::range(-20.0f, 20.0f));
-        e.assign<beagle::Scale>(eagle::Random::range(0.5f, 2.0f), eagle::Random::range(0.5f, 2.0f), eagle::Random::range(0.5f, 2.0f));
-        e.assign<Rotator>(glm::vec3(eagle::Random::range(-20.0f, 20.0f), eagle::Random::range(-20.0f, 20.0f), eagle::Random::range(-20.0f, 20.0f)));
-
-        e.assign<beagle::Transform>();
-        e.assign<beagle::MeshRenderer>(i % 2 ? cubeMesh : i % 5 ? pyramidMesh : sphereMesh, material);
-    }
+//    for (int i = 0; i < entityCount; i++){
+//        auto e = engine->entities().create();
+//        e.assign<beagle::Position>(eagle::Random::range(-range, range), eagle::Random::range(-range, range), eagle::Random::range(-range, range));
+//        e.assign<beagle::Rotation>(eagle::Random::range(-20.0f, 20.0f), eagle::Random::range(-20.0f, 20.0f), eagle::Random::range(-20.0f, 20.0f));
+//        e.assign<beagle::Scale>(eagle::Random::range(0.5f, 2.0f), eagle::Random::range(0.5f, 2.0f), eagle::Random::range(0.5f, 2.0f));
+//        e.assign<Rotator>(glm::vec3(eagle::Random::range(-20.0f, 20.0f), eagle::Random::range(-20.0f, 20.0f), eagle::Random::range(-20.0f, 20.0f)));
+//
+//        e.assign<beagle::Transform>();
+//        e.assign<beagle::MeshRenderer>(i % 2 ? cubeMesh : i % 5 ? pyramidMesh : sphereMesh, material);
+//    }
 
     for (int i  = 0; i < 8; i++){
         auto e = engine->entities().create();
-        auto position = e.assign<beagle::Position>(eagle::Random::range(-range, range), eagle::Random::range(-range, range), eagle::Random::range(-range, range));
-        e.assign<beagle::PointLight>(glm::vec3(1.0f, 0.0f, 0.0f));
+        auto position = e.assign<beagle::Position>((i % 4) * 5 + 10, (i / 4) * 5 + 10, -20);
+        e.assign<beagle::PointLight>(glm::vec3(1.0f), 32.0f);
         e.assign<beagle::Scale>(0.5f);
         e.assign<beagle::Transform>();
         auto oscilator = e.assign<Oscilator>(position->vec);
-        oscilator->frequency = eagle::Random::value() * 10;
+        oscilator->frequency = eagle::Random::value() * 0.2f;
         e.assign<beagle::MeshRenderer>(sphereMesh, lightMaterial);
     }
 
     auto e = engine->entities().create();
     e.assign<beagle::MeshRenderer>(planeMesh, woodMaterial);
-    e.assign<beagle::Position>(0, -5, 0);
+    e.assign<beagle::Position>(0, -range, 0);
     e.assign<beagle::Scale>(40, 1, 40);
     e.assign<beagle::Transform>();
 

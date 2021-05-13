@@ -9,9 +9,6 @@ struct DirectionalLight {
 struct PointLight {
     vec4 color;
     vec3 position;
-    float constant;
-    float linear;
-    float quadratic;
 };
 
 struct Illumination {
