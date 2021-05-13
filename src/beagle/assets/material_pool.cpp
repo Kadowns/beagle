@@ -62,6 +62,32 @@ void Material::update_texture(size_t binding, const TextureHandle& texture) {
     m_descriptorSet.lock()->update();
 }
 
+void Material::update_uniform(size_t binding, const std::string& name, void* data, size_t size) {
+    auto descriptorSet = m_descriptorSet.lock();
+    if (binding >= descriptorSet->size()){
+        return;
+    }
+
+    auto descriptor = descriptorSet->operator[](binding).lock();
+    if (!descriptor || descriptor->type() != eagle::DescriptorType::UNIFORM_BUFFER){
+        return;
+    }
+
+    auto& bindingDescription = m_bindingDescriptions[binding];
+
+    auto it = bindingDescription.members.find(name);
+    if (it == bindingDescription.members.end()){
+        return;
+    }
+
+    auto& member = it->second;
+
+    auto uniformBuffer = std::static_pointer_cast<eagle::UniformBuffer>(descriptor);
+    assert(uniformBuffer);
+    uniformBuffer->copy_from(data, size, member.offset);
+    uniformBuffer->upload();
+}
+
 MaterialPool::MaterialPool(eagle::RenderingContext* context, TexturePool* texturePool) :
     m_context(context), m_texturePool(texturePool) {
 

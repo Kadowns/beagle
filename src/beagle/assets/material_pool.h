@@ -19,6 +19,17 @@ public:
     ShaderHandle& shader() { return m_shader; }
     std::shared_ptr<eagle::DescriptorSet> descriptor_set() { return m_descriptorSet.lock(); }
 
+    template<typename U>
+    inline void update_uniform(size_t binding, const U& uniform) {
+        update_uniform(binding, (void*)&uniform, sizeof(uniform));
+    }
+
+    template<typename U>
+    inline void update_uniform(size_t binding, const std::string& name, const U& uniform) {
+        update_uniform(binding, name, (void*)&uniform, sizeof(uniform));
+    }
+
+    void update_uniform(size_t binding, const std::string& name, void* data, size_t size);
     void update_uniform(size_t binding, void* data, size_t size, size_t offset = 0);
     void update_texture(size_t binding, const TextureHandle& texture);
 
