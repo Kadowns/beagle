@@ -26,6 +26,14 @@ struct Rotator {
     glm::vec3 frequency;
 };
 
+struct Vertex {
+    glm::vec3 position;
+    glm::vec2 texCoord;
+    glm::vec3 normal;
+    glm::vec3 tangent;
+    glm::vec3 bitangent;
+};
+
 class TemplateGame : public beagle::Game {
 public:
     TemplateGame();
@@ -36,6 +44,10 @@ public:
     void step(beagle::Engine* engine) override;
 
     void destroy(beagle::Engine* engine) override;
+private:
+
+    static void calculate_tangent_space(std::vector<Vertex>& vertices, const std::vector<uint32_t>& indices);
+
 private:
 
     beagle::EntityGroup<beagle::Transform> m_quadsGroup;

@@ -2,7 +2,6 @@
 #define PBR_GLSL 1
 
 #include "../light.glsl"
-#include "pbr_material.glsl"
 
 const float PI = 3.14159265359;
 

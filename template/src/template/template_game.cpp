@@ -20,18 +20,58 @@ TemplateGame::TemplateGame() {
     eagle::Random::init();
 }
 
+void TemplateGame::calculate_tangent_space(std::vector<Vertex>& vertices, const std::vector<uint32_t>& indices) {
+
+    for (size_t i = 0; i < indices.size(); i += 3){
+
+        uint32_t idx1 = indices[i];
+        uint32_t idx2 = indices[i + 1];
+        uint32_t idx3 = indices[i + 2];
+
+
+        glm::vec3 pos1 = vertices[idx1].position;
+        glm::vec3 pos2 = vertices[idx2].position;
+        glm::vec3 pos3 = vertices[idx3].position;
+
+        glm::vec2 uv1 = vertices[idx1].texCoord;
+        glm::vec2 uv2 = vertices[idx2].texCoord;
+        glm::vec2 uv3 = vertices[idx3].texCoord;
+
+        glm::vec3 edge1 = pos2 - pos1;
+        glm::vec3 edge2 = pos3 - pos1;
+        glm::vec2 deltaUV1 = uv2 - uv1;
+        glm::vec2 deltaUV2 = uv3 - uv1;
+
+        float f = 1.0f / (deltaUV1.x * deltaUV2.y - deltaUV2.x * deltaUV1.y);
+
+        glm::vec3 tangent = {
+                f * (deltaUV2.y * edge1.x - deltaUV1.y * edge2.x),
+                f * (deltaUV2.y * edge1.y - deltaUV1.y * edge2.y),
+                f * (deltaUV2.y * edge1.z - deltaUV1.y * edge2.z)
+        };
+
+        glm::vec3 bitangent = {
+                f * (-deltaUV2.x * edge1.x + deltaUV1.x * edge2.x),
+                f * (-deltaUV2.x * edge1.y + deltaUV1.x * edge2.y),
+                f * (-deltaUV2.x * edge1.z + deltaUV1.x * edge2.z)
+        };
+
+        vertices[idx1].tangent = tangent;
+        vertices[idx2].tangent = tangent;
+        vertices[idx3].tangent = tangent;
+
+        vertices[idx1].bitangent = bitangent;
+        vertices[idx2].bitangent = bitangent;
+        vertices[idx3].bitangent = bitangent;
+    }
+}
+
+
 void TemplateGame::init(beagle::Engine* engine) {
     EG_TRACE("template", "init called");
 
     auto& window = eagle::Application::instance().window();
     auto context = window.rendering_context();
-
-    struct Vertex {
-        glm::vec3 position;
-        glm::vec2 texCoord;
-        glm::vec3 normal;
-    };
-
 
     auto pi = 3.141592;
 
@@ -76,33 +116,29 @@ void TemplateGame::init(beagle::Engine* engine) {
         }
     }
 
+    calculate_tangent_space(sphereVertices, sphereIndices);
     auto sphereMesh = engine->asset_manager().mesh_pool().insert(sphereVertices, sphereIndices);
 
     struct Plane {
-        std::array<Vertex, 4> vertices = {
+        std::vector<Vertex> vertices = {
                 Vertex{glm::vec3(-1.0f, 0.0f, -1.0f), glm::vec2(0.0f, 1.0f), glm::vec3(0.0f, 1.0f, 0.0f)},
                 Vertex{glm::vec3(-1.0f, 0.0f, 1.0f), glm::vec2(0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f)},
                 Vertex{glm::vec3(1.0f, 0.0f, 1.0f), glm::vec2(1.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f)},
                 Vertex{glm::vec3(1.0f, 0.0f, -1.0f), glm::vec2(1.0f, 1.0f), glm::vec3(0.0f, 1.0f, 0.0f)}
         };
 
-        std::array<uint32_t, 6> indices = {
+        std::vector<uint32_t> indices = {
                 0, 1, 2, 0, 2, 3, //down
         };
     } plane;
 
-    auto planeMesh = engine->asset_manager().mesh_pool().insert(
-            plane.vertices.data(),
-            plane.vertices.size(),
-            sizeof(Vertex),
-            plane.indices.data(),
-            plane.indices.size(),
-            sizeof(uint32_t)
-            );
+    calculate_tangent_space(plane.vertices, plane.indices);
+
+    auto planeMesh = engine->asset_manager().mesh_pool().insert(plane.vertices, plane.indices);
 
     struct Cube {
 
-        std::array<Vertex, 24> vertices = {
+        std::vector<Vertex> vertices = {
                 //up
                 Vertex{glm::vec3(-1.0f, -1.0f, -1.0f), glm::vec2(0.0f, 1.0f), glm::vec3(0.0f, -1.0f, 0.0f)},
                 Vertex{glm::vec3(-1.0f, -1.0f, 1.0f), glm::vec2(0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f)},
@@ -139,7 +175,7 @@ void TemplateGame::init(beagle::Engine* engine) {
                 Vertex{glm::vec3(1.0f, 1.0f, -1.0f), glm::vec2(1.0f, 0.0f), glm::vec3(0.0f, 0.0f, -1.0f)},
                 Vertex{glm::vec3(1.0f, -1.0f, -1.0f), glm::vec2(1.0f, 1.0f), glm::vec3(0.0f, 0.0f, -1.0f)}
         };
-        std::array<uint32_t, 36> indices = {
+        std::vector<uint32_t> indices = {
                 0, 3, 2, 0, 2, 1, //up
                 4, 5, 6, 4, 6, 7, //down
                 8, 9, 10, 8, 10, 11, //left
@@ -149,14 +185,9 @@ void TemplateGame::init(beagle::Engine* engine) {
         };
     } cube;
 
-    auto cubeMesh = engine->asset_manager().mesh_pool().insert(
-            cube.vertices.data(),
-            cube.vertices.size(),
-            sizeof(Vertex),
-            cube.indices.data(),
-            cube.indices.size(),
-            sizeof(uint32_t)
-    );
+    calculate_tangent_space(cube.vertices, cube.indices);
+
+    auto cubeMesh = engine->asset_manager().mesh_pool().insert(cube.vertices, cube.indices);
 
     struct Pyramid {
         std::vector<Vertex> vertices {
@@ -184,6 +215,8 @@ void TemplateGame::init(beagle::Engine* engine) {
         };
     } pyramid;
 
+    calculate_tangent_space(pyramid.vertices, pyramid.indices);
+
     auto pyramidMesh = engine->asset_manager().mesh_pool().insert(pyramid.vertices, pyramid.indices);
 
     engine->asset_manager().mesh_pool().upload();
@@ -205,6 +238,12 @@ void TemplateGame::init(beagle::Engine* engine) {
     //normal
     shaderCreateInfo.vertexLayout.add(0, eagle::Format::R32G32B32_SFLOAT);
 
+    //tangent
+    shaderCreateInfo.vertexLayout.add(0, eagle::Format::R32G32B32_SFLOAT);
+
+    //bitangent
+    shaderCreateInfo.vertexLayout.add(0, eagle::Format::R32G32B32_SFLOAT);
+
     //transform matrix
     //build a mat4 using 4 vec4
     shaderCreateInfo.vertexLayout.add(1, eagle::Format::R32G32B32A32_SFLOAT);
@@ -220,13 +259,7 @@ void TemplateGame::init(beagle::Engine* engine) {
 
     shaderCreateInfo.vertexLayout[1].inputRate = eagle::VertexInputRate::INSTANCE;
     shaderCreateInfo.depthTesting = true;
-
-    auto metalMeshAlbedo = engine->asset_manager().texture_pool().insert("images/metal/Metal_Mesh_006_basecolor.jpg");
-    auto metalMeshMetallic = engine->asset_manager().texture_pool().insert("images/metal/Metal_Mesh_006_metallic.jpg");
-    auto metalMeshRoughness = engine->asset_manager().texture_pool().insert("images/metal/Metal_Mesh_006_roughness.jpg");
-    auto metalMeshAO = engine->asset_manager().texture_pool().insert("images/metal/Metal_Mesh_006_ambientOcclusion.jpg");
-    auto woodTexture = engine->asset_manager().texture_pool().insert("images/wood.png");
-
+    shaderCreateInfo.blendEnable = true;
     auto shader = engine->asset_manager().shader_pool().insert(shaderCreateInfo, "pbr");
 
 
@@ -237,6 +270,13 @@ void TemplateGame::init(beagle::Engine* engine) {
         float ao;
     };
 
+
+    auto metalMeshAlbedo = engine->asset_manager().texture_pool().insert("images/metal_2/Metal_Tiles_004_basecolor.jpg");
+    auto metalMeshMetallic = engine->asset_manager().texture_pool().insert("images/metal_2/Metal_Tiles_004_metallic.jpg");
+    auto metalMeshRoughness = engine->asset_manager().texture_pool().insert("images/metal_2/Metal_Tiles_004_roughness.jpg");
+    auto metalMeshAO = engine->asset_manager().texture_pool().insert("images/metal_2/Metal_Tiles_004_ambientOcclusion.jpg");
+    auto metalMeshNormal = engine->asset_manager().texture_pool().insert("images/metal_2/Metal_Tiles_004_normal.jpg");
+    auto woodTexture = engine->asset_manager().texture_pool().insert("images/wood.png");
 
 
     auto metalicMaterial = engine->asset_manager().material_pool().insert(shader);
@@ -255,39 +295,30 @@ void TemplateGame::init(beagle::Engine* engine) {
     woodMaterial->update_uniform(0, MaterialData{glm::vec4(0.2f, 0.7f, 0.5f, 1.0f), 0.1f, 0.6f, 8.0f});
     woodMaterial->update_texture(1, woodTexture);
 
+    auto material = engine->asset_manager().material_pool().insert(shader);
+    material->update_uniform(0, MaterialData{glm::vec4(1.0f), 1.0f, 1.0f, 1.0f});
+    material->update_texture(1, metalMeshAlbedo);
+    material->update_texture(2, metalMeshMetallic);
+    material->update_texture(3, metalMeshRoughness);
+    material->update_texture(4, metalMeshAO);
+    material->update_texture(5, metalMeshNormal);
+//    material->update_texture(6, metalMeshOpacity);
+
     const int entityCount = 100;
     const float range = 30.0f;
 
     for (int i = 0; i < entityCount; i++){
 
-        auto material = engine->asset_manager().material_pool().insert(shader);
-        float metallic = (float)(i % 10) / 9;
-        float roughness = (float)(i / 10) / 9;
-        material->update_uniform(0, MaterialData{glm::vec4(1.0f), metallic, roughness, 1.0f});
-        material->update_texture(1, metalMeshAlbedo);
-        material->update_texture(2, metalMeshMetallic);
-        material->update_texture(3, metalMeshRoughness);
-        material->update_texture(4, metalMeshAO);
-
         auto e = engine->entities().create();
         e.assign<beagle::Position>((i % 10) * 3, (i / 10) * 3, 0);
         e.assign<beagle::Rotation>();
         e.assign<beagle::Scale>();
-        e.assign<Rotator>(glm::vec3(eagle::Random::range(-20.0f, 20.0f), eagle::Random::range(-20.0f, 20.0f), eagle::Random::range(-20.0f, 20.0f)));
+        if (i % 2){
+            e.assign<Rotator>(glm::vec3(eagle::Random::range(-20.0f, 20.0f), eagle::Random::range(-20.0f, 20.0f), eagle::Random::range(-20.0f, 20.0f)));
+        }
         e.assign<beagle::Transform>();
-        e.assign<beagle::MeshRenderer>(sphereMesh, material);
+        e.assign<beagle::MeshRenderer>(i % 2 ? sphereMesh : cubeMesh, material);
     }
-
-//    for (int i = 0; i < entityCount; i++){
-//        auto e = engine->entities().create();
-//        e.assign<beagle::Position>(eagle::Random::range(-range, range), eagle::Random::range(-range, range), eagle::Random::range(-range, range));
-//        e.assign<beagle::Rotation>(eagle::Random::range(-20.0f, 20.0f), eagle::Random::range(-20.0f, 20.0f), eagle::Random::range(-20.0f, 20.0f));
-//        e.assign<beagle::Scale>(eagle::Random::range(0.5f, 2.0f), eagle::Random::range(0.5f, 2.0f), eagle::Random::range(0.5f, 2.0f));
-//        e.assign<Rotator>(glm::vec3(eagle::Random::range(-20.0f, 20.0f), eagle::Random::range(-20.0f, 20.0f), eagle::Random::range(-20.0f, 20.0f)));
-//
-//        e.assign<beagle::Transform>();
-//        e.assign<beagle::MeshRenderer>(i % 2 ? cubeMesh : i % 5 ? pyramidMesh : sphereMesh, material);
-//    }
 
     for (int i  = 0; i < 8; i++){
         auto e = engine->entities().create();
