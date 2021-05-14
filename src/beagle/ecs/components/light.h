@@ -17,12 +17,10 @@ struct DirectionalLight {
 };
 
 struct PointLight {
-    explicit PointLight(const glm::vec3& color = glm::vec3(1), float constant = 1.0f, float linear = 0.09f, float quadratic = 0.032f) :
-    color(color), constant(constant), linear(linear), quadratic(quadratic) {}
+    explicit PointLight(const glm::vec3& color = glm::vec3(1), float intensity = 1.0f) :
+    color(color), intensity(intensity){}
     glm::vec3 color;
-    float constant;
-    float linear;
-    float quadratic;
+    float intensity;
 };
 
 }
