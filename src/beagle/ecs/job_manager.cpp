@@ -2,11 +2,11 @@
 // Created by Ricardo on 4/11/2021.
 //
 
-#include "job_system.h"
+#include "job_manager.h"
 
 namespace beagle {
 
-JobSystem::Worker::Worker(JobSystem* manager) : m_manager(manager) {
+JobManager::Worker::Worker(JobManager* manager) : m_manager(manager) {
     m_thread = std::thread([this]{
        while(true) {
            std::unique_lock<std::mutex> lock(m_manager->m_queueMutex);
@@ -30,29 +30,29 @@ JobSystem::Worker::Worker(JobSystem* manager) : m_manager(manager) {
     });
 }
 
-JobSystem::Worker::~Worker() {
+JobManager::Worker::~Worker() {
     m_thread.join();
 }
 
-void JobSystem::Worker::stop() {
+void JobManager::Worker::stop() {
     m_stop = true;
 }
 
-JobSystem::JobSystem() {
+JobManager::JobManager() {
     m_workers.resize(std::thread::hardware_concurrency());
     for (auto& worker : m_workers){
         worker = std::make_shared<Worker>(this);
     }
 }
 
-JobSystem::~JobSystem() {
+JobManager::~JobManager() {
     for (auto& worker : m_workers){
         worker->stop();
     }
     m_awakeWorker.notify_all();
 }
 
-void JobSystem::execute() {
+void JobManager::execute() {
 
     m_executionTimes.clear();
     for (auto vertex : m_jobGraph){
@@ -68,7 +68,7 @@ void JobSystem::execute() {
     });
 }
 
-void JobSystem::enqueue_available_jobs() {
+void JobManager::enqueue_available_jobs() {
     std::unique_lock<std::mutex> lock(m_queueMutex);
     for (auto jobVertex : m_jobGraph){
         if (is_job_available(jobVertex->m_index)){
@@ -78,7 +78,7 @@ void JobSystem::enqueue_available_jobs() {
     }
 }
 
-bool JobSystem::is_job_available(size_t jobId) {
+bool JobManager::is_job_available(size_t jobId) {
     auto vertex = m_jobGraph.vertex(jobId);
     if (vertex->is_enqueued()){
         return false;
@@ -92,20 +92,20 @@ bool JobSystem::is_job_available(size_t jobId) {
     return true;
 }
 
-void JobSystem::add_dependency(size_t jobId, size_t dependencyId) {
+void JobManager::add_dependency(size_t jobId, size_t dependencyId) {
     m_jobGraph.connect(dependencyId, jobId, JobRelation::RUN_BEFORE);
     m_jobGraph.connect(jobId, dependencyId, JobRelation::RUN_AFTER);
 }
 
-bool JobSystem::has_available_job() {
+bool JobManager::has_available_job() {
     return !m_availableJobs.empty();
 }
 
-bool JobSystem::has_unfinished_job() {
+bool JobManager::has_unfinished_job() {
     return std::any_of(m_jobGraph.begin(), m_jobGraph.end(), [](JobHandle* vertex){return !vertex->is_executed();});
 }
 
-void JobSystem::job_finished(size_t jobId, int64_t executionTime) {
+void JobManager::job_finished(size_t jobId, int64_t executionTime) {
     std::unique_lock<std::mutex> lock(m_queueMutex);
     auto vertex = m_jobGraph.vertex(jobId);
     vertex->set_executed(true);
@@ -123,7 +123,7 @@ void JobSystem::job_finished(size_t jobId, int64_t executionTime) {
     m_awakeWorker.notify_all();
 }
 
-size_t JobSystem::next_job() {
+size_t JobManager::next_job() {
     auto id = m_availableJobs.front();
     m_availableJobs.pop();
     return id;

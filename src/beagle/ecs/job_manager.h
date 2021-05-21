@@ -46,25 +46,26 @@ private:
     std::function<void()> m_task;
 };
 
-class JobSystem {
+class JobManager {
 private:
     class Worker {
     public:
-        explicit Worker(JobSystem* manager);
+        explicit Worker(JobManager* manager);
         ~Worker();
 
         void stop();
 
     private:
-        JobSystem* m_manager;
+        JobManager* m_manager;
         size_t m_currentJobIndex;
 
         std::thread m_thread;
         bool m_stop = false;
     };
-
+public:
     class JobHandle {
     public:
+        JobHandle() = default;
         void run_after(const JobHandle& other) {
             m_manager->add_dependency(m_index, other.m_index);
         }
@@ -74,10 +75,10 @@ private:
         }
 
     private:
-        friend JobSystem;
+        friend JobManager;
         friend Worker;
 
-        JobHandle(JobSystem* manager, size_t index, std::shared_ptr<BaseJob>&& job) :
+        JobHandle(JobManager* manager, size_t index, std::shared_ptr<BaseJob>&& job) :
                 m_manager(manager), m_index(index), m_job(std::forward<std::shared_ptr<BaseJob>>(job)) {}
 
         bool is_enqueued() const { return m_enqueued; }
@@ -87,12 +88,13 @@ private:
         void set_executed(bool value) { m_executed = value; }
 
     private:
-        JobSystem* m_manager;
+        JobManager* m_manager = nullptr;
         std::shared_ptr<BaseJob> m_job;
-        size_t m_index;
+        size_t m_index = 0;
         bool m_enqueued = false;
         bool m_executed = false;
     };
+private:
 
     enum class JobRelation {
         RUN_BEFORE,
@@ -111,8 +113,8 @@ private:
 
 public:
 
-    JobSystem();
-    ~JobSystem();
+    JobManager();
+    ~JobManager();
 
     template<typename TJob, typename ...Args>
     JobHandle enqueue(Args&& ...args) {
