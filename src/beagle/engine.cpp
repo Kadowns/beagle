@@ -9,7 +9,7 @@
 
 namespace beagle {
 
-Engine::Engine(Game* game) : m_game(game){
+Engine::Engine(Game* game) : m_game(game), m_systemManager(this){
 
 }
 

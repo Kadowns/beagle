@@ -8,7 +8,8 @@
 #include <beagle/beagle_global_definitions.h>
 #include <beagle/game.h>
 #include <beagle/ecs/entity.h>
-#include <beagle/ecs/job_system.h>
+#include <beagle/ecs/job_manager.h>
+#include <beagle/ecs/system_manager.h>
 #include <beagle/ecs/components/transform.h>
 #include <beagle/assets/asset_manager.h>
 
@@ -38,7 +39,8 @@ public:
 
     inline EntityManager& entities() { return m_entityManager; }
     inline AssetManager& asset_manager() { return *m_assetManager; }
-    inline JobSystem& jobs() { return m_jobSystem; }
+    inline JobManager& jobs() { return m_jobSystem; }
+    inline SystemManager& systems() { return m_systemManager; }
     inline eagle::Timer& timer() { return m_timer; }
 
 private:
@@ -53,7 +55,8 @@ private:
     EntityManager m_entityManager;
     std::unique_ptr<AssetManager> m_assetManager;
 
-    JobSystem m_jobSystem;
+    JobManager m_jobSystem;
+    SystemManager m_systemManager;
     std::unique_ptr<Game> m_game;
 
 };

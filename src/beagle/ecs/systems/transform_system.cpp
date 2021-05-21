@@ -3,6 +3,7 @@
 //
 
 #include "transform_system.h"
+#include <beagle/engine.h>
 
 using namespace beagle;
 
@@ -26,4 +27,8 @@ void TransformUpdateMatricesJob::execute() {
         tr->matrix = matrix;
         tr->inverseMatrix = glm::inverse(matrix);
     }
+}
+
+void TransformSystem::configure(Engine* engine) {
+    updateMatricesJob = engine->jobs().enqueue<TransformUpdateMatricesJob>(&engine->entities());
 }

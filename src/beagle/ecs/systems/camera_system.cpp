@@ -2,9 +2,8 @@
 // Created by Ricardo on 4/25/2021.
 //
 
-#include <beagle/ecs/components/transform.h>
-#include <beagle/ecs/components/mesh_renderer.h>
 #include "camera_system.h"
+#include <beagle/engine.h>
 
 using namespace beagle;
 
@@ -79,4 +78,34 @@ bool CameraUpdatePerspectiveProjectionJob::receive(const eagle::OnWindowResized&
     m_width = ev.width;
     m_height = ev.height;
     return false;
+}
+
+RenderCameraJob::RenderCameraJob(EntityManager* manager) : BaseJob("RenderCameraJob") {
+    m_cameraGroup.attach(manager);
+}
+
+void RenderCameraJob::execute() {
+
+    for (auto[camera] : m_cameraGroup){
+
+        auto commandBuffer = camera->commandBuffer.lock();
+        commandBuffer->begin();
+        commandBuffer->begin_render_pass(camera->renderPass.lock(), camera->framebuffer.lock());
+
+        std::vector<std::shared_ptr<eagle::CommandBuffer>> secondaryCommandBuffers;
+        secondaryCommandBuffers.reserve(camera->secondaryCommandBuffers.size());
+        for (auto& cmdBuffer : camera->secondaryCommandBuffers){
+            secondaryCommandBuffers.emplace_back(cmdBuffer.lock());
+        }
+        commandBuffer->execute_commands(secondaryCommandBuffers);
+        commandBuffer->end_render_pass();
+        commandBuffer->end();
+        camera->context->submit_command_buffer(commandBuffer);
+    }
+}
+
+void CameraSystem::configure(Engine* engine) {
+    updateOrthographicProjectionJob = engine->jobs().enqueue<CameraUpdateOrthographicProjectionJob>(&engine->entities(), 1280, 720);
+    updatePerspectiveProjectionJob = engine->jobs().enqueue<CameraUpdatePerspectiveProjectionJob>(&engine->entities(), 1280, 720);
+    renderJob = engine->jobs().enqueue<RenderCameraJob>(&engine->entities());
 }

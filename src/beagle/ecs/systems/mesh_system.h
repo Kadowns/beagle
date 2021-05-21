@@ -5,13 +5,14 @@
 #ifndef BEAGLE_MESH_SYSTEM_H
 #define BEAGLE_MESH_SYSTEM_H
 
-#include <beagle/ecs/job_system.h>
+#include <beagle/ecs/job_manager.h>
 #include <beagle/ecs/entity.h>
 #include <beagle/ecs/components/mesh_renderer.h>
 #include <beagle/ecs/components/transform.h>
 #include <beagle/ecs/components/camera.h>
 #include <beagle/ecs/components/light.h>
 #include <beagle/ecs/events/camera_events.h>
+#include <beagle/ecs/system_manager.h>
 
 namespace beagle {
 
@@ -62,6 +63,15 @@ public:
 private:
     EntityGroup<Camera, MeshFilter> m_meshFilterGroup;
 
+};
+
+struct MeshFilterSystem : BaseSystem {
+    void configure(Engine* engine) override;
+
+    JobManager::JobHandle updateVertexUboJob;
+    JobManager::JobHandle updateInstanceBufferJob;
+    JobManager::JobHandle updateFragmentUboJob;
+    JobManager::JobHandle renderJob;
 };
 
 }

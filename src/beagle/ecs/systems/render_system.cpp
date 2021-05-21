@@ -3,8 +3,10 @@
 //
 
 #include "render_system.h"
+#include <beagle/engine.h>
 
-#include <utility>
+#include <eagle/application.h>
+#include <eagle/window.h>
 
 using namespace beagle;
 
@@ -26,22 +28,8 @@ void RenderEndJob::execute() {
     m_context->present_frame();
 }
 
-
-RenderCameraJob::RenderCameraJob(EntityManager* manager) : BaseJob("RenderCameraJob") {
-    m_cameraGroup.attach(manager);
-}
-
-void RenderCameraJob::execute() {
-
-    for (auto[camera] : m_cameraGroup){
-
-        auto commandBuffer = camera->commandBuffer.lock();
-        commandBuffer->begin();
-        commandBuffer->begin_render_pass(camera->renderPass.lock(), camera->framebuffer.lock());
-        commandBuffer->execute_commands(camera->secondaryCommandBuffers);
-        commandBuffer->end_render_pass();
-        commandBuffer->end();
-        camera->context->submit_command_buffer(commandBuffer);
-        camera->secondaryCommandBuffers.clear();
-    }
+void RenderSystem::configure(Engine* engine) {
+    auto context = eagle::Application::instance().window().rendering_context();
+    beginJob = engine->jobs().enqueue<RenderBeginJob>(context);
+    endJob = engine->jobs().enqueue<RenderEndJob>(context);
 }

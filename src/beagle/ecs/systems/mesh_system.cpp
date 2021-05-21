@@ -2,6 +2,7 @@
 // Created by Ricardo on 5/8/2021.
 //
 #include "mesh_system.h"
+#include <beagle/engine.h>
 
 using namespace beagle;
 
@@ -233,6 +234,12 @@ void MeshFilterRenderJob::execute() {
         }
 
         commandBuffer->end();
-        camera->secondaryCommandBuffers.emplace_back(commandBuffer);
     }
+}
+
+void MeshFilterSystem::configure(Engine* engine) {
+    updateVertexUboJob = engine->jobs().enqueue<MeshFilterUpdateVertexUboJob>(&engine->entities());
+    updateInstanceBufferJob = engine->jobs().enqueue<MeshFilterUpdateInstanceBufferJob>(&engine->entities());
+    updateFragmentUboJob = engine->jobs().enqueue<MeshFilterUpdateFragmentUboJob>(&engine->entities());
+    renderJob = engine->jobs().enqueue<MeshFilterRenderJob>(&engine->entities());
 }

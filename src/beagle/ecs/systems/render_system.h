@@ -5,7 +5,8 @@
 #ifndef BEAGLE_RENDER_SYSTEM_H
 #define BEAGLE_RENDER_SYSTEM_H
 
-#include <beagle/ecs/job_system.h>
+#include <beagle/ecs/system_manager.h>
+#include <beagle/ecs/job_manager.h>
 #include <beagle/ecs/entity.h>
 #include <beagle/ecs/components/camera.h>
 
@@ -29,13 +30,10 @@ private:
     eagle::RenderingContext* m_context;
 };
 
-
-class RenderCameraJob : public BaseJob {
-public:
-    explicit RenderCameraJob(EntityManager* manager);
-    void execute() override;
-private:
-    EntityGroup<Camera> m_cameraGroup;
+struct RenderSystem :  BaseSystem {
+    void configure(Engine* engine) override;
+    JobManager::JobHandle beginJob;
+    JobManager::JobHandle endJob;
 };
 
 }

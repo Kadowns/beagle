@@ -5,7 +5,8 @@
 #ifndef BEAGLE_TRANSFORM_SYSTEM_H
 #define BEAGLE_TRANSFORM_SYSTEM_H
 
-#include <beagle/ecs/job_system.h>
+#include <beagle/ecs/system_manager.h>
+#include <beagle/ecs/job_manager.h>
 #include <beagle/ecs/entity.h>
 #include <beagle/ecs/components/transform.h>
 
@@ -19,6 +20,13 @@ public:
 private:
     EntityGroup<Transform> m_transformGroup;
 };
+
+
+struct TransformSystem : BaseSystem {
+    void configure(Engine* engine) override;
+    JobManager::JobHandle updateMatricesJob;
+};
+
 
 }
 
