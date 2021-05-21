@@ -21,7 +21,7 @@ TexturePool::TexturePool(eagle::RenderingContext* context) : m_context(context) 
     textureCreateInfo.imageCreateInfo.memoryProperties = {eagle::MemoryProperty::DEVICE_LOCAL};
     textureCreateInfo.imageCreateInfo.usages = {eagle::ImageUsage::SAMPLED, eagle::ImageUsage::TRANSFER_DST};
     textureCreateInfo.imageCreateInfo.aspects = {eagle::ImageAspect::COLOR};
-    textureCreateInfo.imageCreateInfo.bufferData = {
+    textureCreateInfo.imageCreateInfo.buffer = {
             255, 255, 255, 255
     };
     insert(textureCreateInfo);
@@ -52,8 +52,8 @@ TextureHandle TexturePool::insert(const std::string& filepath) {
     textureCreateInfo.imageCreateInfo.height = height;
     int len = width * height * 4;
 
-    textureCreateInfo.imageCreateInfo.bufferData.resize(len);
-    memcpy(textureCreateInfo.imageCreateInfo.bufferData.data(), buffer, len);
+    textureCreateInfo.imageCreateInfo.buffer.resize(len);
+    memcpy(textureCreateInfo.imageCreateInfo.buffer.data(), buffer, len);
     stbi_image_free(buffer);
 
     textureCreateInfo.imageCreateInfo.format = eagle::Format::R8G8B8A8_UNORM;
@@ -64,6 +64,41 @@ TextureHandle TexturePool::insert(const std::string& filepath) {
     textureCreateInfo.imageCreateInfo.aspects = {eagle::ImageAspect::COLOR};
     textureCreateInfo.imageCreateInfo.usages = {eagle::ImageUsage::SAMPLED, eagle::ImageUsage::TRANSFER_DST};
     textureCreateInfo.imageCreateInfo.layout = eagle::ImageLayout::SHADER_READ_ONLY_OPTIMAL;
+    textureCreateInfo.filter = eagle::Filter::LINEAR;
+    return insert(textureCreateInfo);
+}
+
+TextureHandle TexturePool::insert(const std::array<std::string, 6>& filepaths) {
+
+    eagle::TextureCreateInfo textureCreateInfo = {};
+
+    for (size_t i = 0; i < filepaths.size(); i++){
+        auto bytes = eagle::FileSystem::instance()->read_bytes(filepaths[i]);
+        int width, height, bpp;
+        auto data = (uint8_t*) stbi_load_from_memory(bytes.data(), bytes.size(), &width, &height, &bpp, STBI_rgb_alpha);
+
+        if (textureCreateInfo.imageCreateInfo.buffer.empty()){
+            textureCreateInfo.imageCreateInfo.width = width;
+            textureCreateInfo.imageCreateInfo.height = height;
+            textureCreateInfo.imageCreateInfo.buffer.resize(width * height * 24);//reserve enough memory for all 6 faces
+        }
+        assert(textureCreateInfo.imageCreateInfo.width == width && "Cube face with unequal width");
+        assert(textureCreateInfo.imageCreateInfo.height == height && "Cube face with unequal height");
+
+        size_t size = width * height * 4;
+        memcpy(textureCreateInfo.imageCreateInfo.buffer.data() + i * size, data, size);
+        stbi_image_free(data);
+    }
+
+    textureCreateInfo.imageCreateInfo.format = eagle::Format::R8G8B8A8_UNORM;
+    textureCreateInfo.imageCreateInfo.mipLevels = 1;
+    textureCreateInfo.imageCreateInfo.arrayLayers = 6;
+    textureCreateInfo.imageCreateInfo.tiling = eagle::ImageTiling::OPTIMAL;
+    textureCreateInfo.imageCreateInfo.memoryProperties = {eagle::MemoryProperty::DEVICE_LOCAL};
+    textureCreateInfo.imageCreateInfo.aspects = {eagle::ImageAspect::COLOR};
+    textureCreateInfo.imageCreateInfo.usages = {eagle::ImageUsage::SAMPLED, eagle::ImageUsage::TRANSFER_DST};
+    textureCreateInfo.imageCreateInfo.layout = eagle::ImageLayout::SHADER_READ_ONLY_OPTIMAL;
+    textureCreateInfo.imageCreateInfo.type = eagle::ImageType::CUBE;
     textureCreateInfo.filter = eagle::Filter::LINEAR;
     return insert(textureCreateInfo);
 }
