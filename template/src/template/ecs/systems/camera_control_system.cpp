@@ -61,11 +61,22 @@ void CameraControlJob::execute() {
             pos -= right;
         }
 
-        auto up = rot * glm::vec3(0, controller->speed * dt, 0);
+        auto rollSpeed = glm::radians(glm::vec3(0, 0, controller->rollSpeed * dt));
         if (input.key_down(EG_KEY_E)) {
-            pos += up;
+            rot *= glm::quat(rollSpeed);
+            rot = glm::normalize(rot);
         }
         if (input.key_down(EG_KEY_Q)) {
+            rot *= glm::quat(-rollSpeed);
+            rot = glm::normalize(rot);
+        }
+
+
+        auto up = rot * glm::vec3(0, controller->speed * dt, 0);
+        if (input.key_down(EG_KEY_R)) {
+            pos += up;
+        }
+        if (input.key_down(EG_KEY_F)) {
             pos -= up;
         }
 

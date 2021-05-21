@@ -13,6 +13,8 @@
 #include <beagle/ecs/systems/render_system.h>
 #include <beagle/ecs/systems/mesh_system.h>
 #include <beagle/ecs/components/light.h>
+#include <beagle/ecs/components/skybox.h>
+#include <beagle/ecs/systems/skybox_system.h>
 
 TemplateGame::TemplateGame() {
     EG_LOG_CREATE("template");
@@ -263,6 +265,19 @@ void TemplateGame::init(beagle::Engine* engine) {
     auto shader = engine->asset_manager().shader_pool().insert(shaderCreateInfo, "pbr");
 
 
+    eagle::ShaderCreateInfo skyboxShaderCreateInfo = {
+            context->main_render_pass(),
+            {
+                    {eagle::ShaderStage::VERTEX, "shaders/skybox/skybox.vert.spv"},
+                    {eagle::ShaderStage::FRAGMENT, "shaders/skybox/skybox.frag.spv"},
+            }
+    };
+    //position
+    skyboxShaderCreateInfo.vertexLayout.add(0, eagle::Format::R32G32B32_SFLOAT);
+    skyboxShaderCreateInfo.depthTesting = true;
+    auto skyboxShader = engine->asset_manager().shader_pool().insert(skyboxShaderCreateInfo, "skybox");
+
+
     struct MaterialData {
         alignas(16) glm::vec4 albedo;
         float metallic;
@@ -277,6 +292,40 @@ void TemplateGame::init(beagle::Engine* engine) {
     auto metalMeshAO = engine->asset_manager().texture_pool().insert("images/metal_2/Metal_Tiles_004_ambientOcclusion.jpg");
     auto metalMeshNormal = engine->asset_manager().texture_pool().insert("images/metal_2/Metal_Tiles_004_normal.jpg");
     auto woodTexture = engine->asset_manager().texture_pool().insert("images/wood.png");
+
+
+//    eagle::TextureCreateInfo cubemapCreateInfo = {};
+//    cubemapCreateInfo.imageCreateInfo.format = eagle::Format::R8G8B8A8_UNORM;
+//    cubemapCreateInfo.imageCreateInfo.width = 1;
+//    cubemapCreateInfo.imageCreateInfo.height = 1;
+//    cubemapCreateInfo.imageCreateInfo.arrayLayers = 6;
+//    cubemapCreateInfo.imageCreateInfo.type = eagle::ImageType::CUBE;
+//    cubemapCreateInfo.imageCreateInfo.aspects = {eagle::ImageAspect::COLOR};
+//    cubemapCreateInfo.imageCreateInfo.usages = {eagle::ImageUsage::TRANSFER_DST, eagle::ImageUsage::SAMPLED};
+//    cubemapCreateInfo.imageCreateInfo.memoryProperties = {eagle::MemoryProperty::DEVICE_LOCAL};
+//    cubemapCreateInfo.imageCreateInfo.mipLevels = 1;
+//    cubemapCreateInfo.imageCreateInfo.layout = eagle::ImageLayout::SHADER_READ_ONLY_OPTIMAL;
+//    cubemapCreateInfo.imageCreateInfo.tiling = eagle::ImageTiling::OPTIMAL;
+//    cubemapCreateInfo.imageCreateInfo.buffer = {
+//            255, 255, 255, 255, //face 0
+//            255, 255, 000, 255, //face 1
+//            255, 000, 255, 255, //face 2
+//            000, 255, 255, 255, //face 3
+//            255, 128, 255, 255, //face 4
+//            255, 128, 128, 255, //face 5
+//    };
+//    cubemapCreateInfo.filter = eagle::Filter::NEAREST;
+
+    auto cubemap = engine->asset_manager().texture_pool().insert({
+        "images/skybox/right.jpg",
+        "images/skybox/left.jpg",
+        "images/skybox/top.jpg",
+        "images/skybox/bottom.jpg",
+        "images/skybox/front.jpg",
+        "images/skybox/back.jpg"
+    });
+    auto skyboxMaterial = engine->asset_manager().material_pool().insert(skyboxShader);
+    skyboxMaterial->update_texture(0, cubemap);
 
 
     auto metalicMaterial = engine->asset_manager().material_pool().insert(shader);
@@ -302,6 +351,7 @@ void TemplateGame::init(beagle::Engine* engine) {
     material->update_texture(3, metalMeshRoughness);
     material->update_texture(4, metalMeshAO);
     material->update_texture(5, metalMeshNormal);
+//    material->update_texture(6, cubemap);
 //    material->update_texture(6, metalMeshOpacity);
 
     const int entityCount = 100;
@@ -348,11 +398,22 @@ void TemplateGame::init(beagle::Engine* engine) {
     e.assign<beagle::CameraPerspectiveProjection>(glm::radians(60.0f), window.width() / window.height(), 0.1f, 1000.0f);
     e.assign<beagle::CameraProjection>();
     e.assign<beagle::Transform>();
-    e.assign<beagle::Camera>(context);
-    e.assign<beagle::MeshFilter>(context, &engine->asset_manager().mesh_pool());
+    auto camera = e.assign<beagle::Camera>(context);
+    auto meshFilter = e.assign<beagle::MeshFilter>(context, &engine->asset_manager().mesh_pool());
+    auto skyboxFilter = e.assign<beagle::SkyboxFilter>(context, skyboxMaterial);
+    camera->secondaryCommandBuffers.emplace_back(meshFilter->commandBuffer);
+    camera->secondaryCommandBuffers.emplace_back(skyboxFilter->commandBuffer);
     auto controller = e.assign<CameraController>(&eagle::Application::instance().event_bus());
     controller->speed = 10.0f;
     controller->mouseSpeed = 6.0f;
+
+
+    auto transformSystem = engine->systems().attach<beagle::TransformSystem>();
+    auto skyboxFilterSystem = engine->systems().attach<beagle::SkyboxFilterSystem>();
+    auto renderSystem = engine->systems().attach<beagle::RenderSystem>();
+    auto meshFilterSystem = engine->systems().attach<beagle::MeshFilterSystem>();
+    auto cameraSystem = engine->systems().attach<beagle::CameraSystem>();
+
 
 
     m_oscilatorGroup.attach(&engine->entities());
@@ -387,42 +448,32 @@ void TemplateGame::init(beagle::Engine* engine) {
             tr->vec = scale;
         }
     }, "Scaler");
-
-    auto transformJob = engine->jobs().enqueue<beagle::TransformUpdateMatricesJob>(&engine->entities());
-    transformJob.run_after(scalerJob);
-    transformJob.run_after(oscilatorJob);
-    transformJob.run_after(rotatorJob);
-
-    auto updateInstanceBufferJob = engine->jobs().enqueue<beagle::MeshFilterUpdateInstanceBufferJob>(&engine->entities());
-    updateInstanceBufferJob.run_after(transformJob);
-
     auto cameraControllerJob = engine->jobs().enqueue<CameraControlJob>(&engine->entities(), &engine->timer());
-    cameraControllerJob.run_before(transformJob);
+    transformSystem->updateMatricesJob.run_after(cameraControllerJob);
+    transformSystem->updateMatricesJob.run_after(scalerJob);
+    transformSystem->updateMatricesJob.run_after(oscilatorJob);
+    transformSystem->updateMatricesJob.run_after(rotatorJob);
 
-    auto cameraOrthoJob = engine->jobs().enqueue<beagle::CameraUpdateOrthographicProjectionJob>(&engine->entities(), window.width(), window.height());
-    auto cameraPerspectiveJob = engine->jobs().enqueue<beagle::CameraUpdatePerspectiveProjectionJob>(&engine->entities(), window.width(), window.height());
-    auto updateVertexUboJob = engine->jobs().enqueue<beagle::MeshFilterUpdateVertexUboJob>(&engine->entities());
-    updateVertexUboJob.run_after(cameraOrthoJob);
-    updateVertexUboJob.run_after(cameraPerspectiveJob);
-    updateVertexUboJob.run_after(transformJob);
+    meshFilterSystem->updateInstanceBufferJob.run_after(transformSystem->updateMatricesJob);
+    meshFilterSystem->updateVertexUboJob.run_after(transformSystem->updateMatricesJob);
+    meshFilterSystem->updateVertexUboJob.run_after(cameraSystem->updatePerspectiveProjectionJob);
+    meshFilterSystem->updateFragmentUboJob.run_after(cameraControllerJob);
 
-    auto updateFragmentUboJob = engine->jobs().enqueue<beagle::MeshFilterUpdateFragmentUboJob>(&engine->entities());
-//    updateFragmentUboJob.run_after(transformJob);
-    updateFragmentUboJob.run_after(cameraControllerJob);
+    skyboxFilterSystem->updateVertexUboJob.run_after(cameraSystem->updatePerspectiveProjectionJob);
+    skyboxFilterSystem->updateVertexUboJob.run_after(transformSystem->updateMatricesJob);
 
-    auto renderBeginJob = engine->jobs().enqueue<beagle::RenderBeginJob>(context);
-    renderBeginJob.run_after(updateInstanceBufferJob);
-    renderBeginJob.run_after(updateVertexUboJob);
-    renderBeginJob.run_after(updateFragmentUboJob);
+    renderSystem->beginJob.run_after(meshFilterSystem->updateVertexUboJob);
+    renderSystem->beginJob.run_after(meshFilterSystem->updateFragmentUboJob);
+    renderSystem->beginJob.run_after(meshFilterSystem->updateInstanceBufferJob);
+    renderSystem->beginJob.run_after(skyboxFilterSystem->updateVertexUboJob);
 
-    auto renderMeshFilterJob = engine->jobs().enqueue<beagle::MeshFilterRenderJob>(&engine->entities());
-    renderMeshFilterJob.run_after(renderBeginJob);
+    meshFilterSystem->renderJob.run_after(renderSystem->beginJob);
+    skyboxFilterSystem->renderJob.run_after(renderSystem->beginJob);
 
-    auto renderCameraJob = engine->jobs().enqueue<beagle::RenderCameraJob>(&engine->entities());
-    renderCameraJob.run_after(renderMeshFilterJob);
+    cameraSystem->renderJob.run_after(meshFilterSystem->renderJob);
+    cameraSystem->renderJob.run_after(skyboxFilterSystem->renderJob);
 
-    auto renderEndJob = engine->jobs().enqueue<beagle::RenderEndJob>(context);
-    renderEndJob.run_after(renderCameraJob);
+    renderSystem->endJob.run_after(cameraSystem->renderJob);
 }
 
 void TemplateGame::step(beagle::Engine* engine) {

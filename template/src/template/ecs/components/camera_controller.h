@@ -19,6 +19,7 @@ struct CameraController {
     }
 
     float speed = 1.0f;
+    float rollSpeed = 30.0f;
     float mouseSpeed = 1.0f;
     float yaw = 0, pitch = 0;
     float dtAccumulator = 0;

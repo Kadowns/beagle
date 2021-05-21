@@ -20,6 +20,8 @@ set(SHADERS
         assets/shaders/mesh.vert
         assets/shaders/phong/phong_mesh.frag
         assets/shaders/pbr/pbr_mesh.frag
+        assets/shaders/skybox/skybox.frag
+        assets/shaders/skybox/skybox.vert
         )
 
 foreach (SHADER ${SHADERS})

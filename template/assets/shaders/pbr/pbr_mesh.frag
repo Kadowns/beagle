@@ -53,6 +53,5 @@ void main() {
     vec3 color = calculate_illumination_pbr(uGlobal.illumination, vPosition, uGlobal.viewPosition, pbr);
     color = color / (color + vec3(1.0));
     color = pow(color, vec3(1.0/2.2));
-
     outColor = vec4(color, 1.0f);
 }

@@ -5,7 +5,7 @@
 #ifndef TEMPLATE_APP_CAMERA_CONTROL_SYSTEM_H
 #define TEMPLATE_APP_CAMERA_CONTROL_SYSTEM_H
 
-#include <beagle/ecs/job_system.h>
+#include <beagle/ecs/job_manager.h>
 #include <beagle/ecs/entity.h>
 
 #include <template/ecs/components/camera_controller.h>
