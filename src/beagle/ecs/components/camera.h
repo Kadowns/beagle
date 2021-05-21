@@ -25,7 +25,7 @@ struct Camera {
     std::weak_ptr<eagle::RenderPass> renderPass;
     std::weak_ptr<eagle::Framebuffer> framebuffer;
     std::weak_ptr<eagle::CommandBuffer> commandBuffer;
-    std::vector<std::shared_ptr<eagle::CommandBuffer>> secondaryCommandBuffers;
+    std::vector<std::weak_ptr<eagle::CommandBuffer>> secondaryCommandBuffers;
 };
 
 struct CameraProjection {
