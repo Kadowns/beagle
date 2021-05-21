@@ -119,7 +119,7 @@ void TemplateGame::init(beagle::Engine* engine) {
     }
 
     calculate_tangent_space(sphereVertices, sphereIndices);
-    auto sphereMesh = engine->asset_manager().mesh_pool().insert(sphereVertices, sphereIndices);
+    auto sphereMesh = engine->assets().mesh_pool().insert(sphereVertices, sphereIndices);
 
     struct Plane {
         std::vector<Vertex> vertices = {
@@ -136,7 +136,7 @@ void TemplateGame::init(beagle::Engine* engine) {
 
     calculate_tangent_space(plane.vertices, plane.indices);
 
-    auto planeMesh = engine->asset_manager().mesh_pool().insert(plane.vertices, plane.indices);
+    auto planeMesh = engine->assets().mesh_pool().insert(plane.vertices, plane.indices);
 
     struct Cube {
 
@@ -189,7 +189,7 @@ void TemplateGame::init(beagle::Engine* engine) {
 
     calculate_tangent_space(cube.vertices, cube.indices);
 
-    auto cubeMesh = engine->asset_manager().mesh_pool().insert(cube.vertices, cube.indices);
+    auto cubeMesh = engine->assets().mesh_pool().insert(cube.vertices, cube.indices);
 
     struct Pyramid {
         std::vector<Vertex> vertices {
@@ -219,9 +219,9 @@ void TemplateGame::init(beagle::Engine* engine) {
 
     calculate_tangent_space(pyramid.vertices, pyramid.indices);
 
-    auto pyramidMesh = engine->asset_manager().mesh_pool().insert(pyramid.vertices, pyramid.indices);
+    auto pyramidMesh = engine->assets().mesh_pool().insert(pyramid.vertices, pyramid.indices);
 
-    engine->asset_manager().mesh_pool().upload();
+    engine->assets().mesh_pool().upload();
 
 
     eagle::ShaderCreateInfo shaderCreateInfo = {
@@ -262,7 +262,7 @@ void TemplateGame::init(beagle::Engine* engine) {
     shaderCreateInfo.vertexLayout[1].inputRate = eagle::VertexInputRate::INSTANCE;
     shaderCreateInfo.depthTesting = true;
     shaderCreateInfo.blendEnable = true;
-    auto shader = engine->asset_manager().shader_pool().insert(shaderCreateInfo, "pbr");
+    auto shader = engine->assets().shader_pool().insert(shaderCreateInfo, "pbr");
 
 
     eagle::ShaderCreateInfo skyboxShaderCreateInfo = {
@@ -275,7 +275,7 @@ void TemplateGame::init(beagle::Engine* engine) {
     //position
     skyboxShaderCreateInfo.vertexLayout.add(0, eagle::Format::R32G32B32_SFLOAT);
     skyboxShaderCreateInfo.depthTesting = true;
-    auto skyboxShader = engine->asset_manager().shader_pool().insert(skyboxShaderCreateInfo, "skybox");
+    auto skyboxShader = engine->assets().shader_pool().insert(skyboxShaderCreateInfo, "skybox");
 
 
     struct MaterialData {
@@ -286,37 +286,14 @@ void TemplateGame::init(beagle::Engine* engine) {
     };
 
 
-    auto metalMeshAlbedo = engine->asset_manager().texture_pool().insert("images/metal_2/Metal_Tiles_004_basecolor.jpg");
-    auto metalMeshMetallic = engine->asset_manager().texture_pool().insert("images/metal_2/Metal_Tiles_004_metallic.jpg");
-    auto metalMeshRoughness = engine->asset_manager().texture_pool().insert("images/metal_2/Metal_Tiles_004_roughness.jpg");
-    auto metalMeshAO = engine->asset_manager().texture_pool().insert("images/metal_2/Metal_Tiles_004_ambientOcclusion.jpg");
-    auto metalMeshNormal = engine->asset_manager().texture_pool().insert("images/metal_2/Metal_Tiles_004_normal.jpg");
-    auto woodTexture = engine->asset_manager().texture_pool().insert("images/wood.png");
+    auto metalMeshAlbedo = engine->assets().texture_pool().insert("images/metal_2/Metal_Tiles_004_basecolor.jpg");
+    auto metalMeshMetallic = engine->assets().texture_pool().insert("images/metal_2/Metal_Tiles_004_metallic.jpg");
+    auto metalMeshRoughness = engine->assets().texture_pool().insert("images/metal_2/Metal_Tiles_004_roughness.jpg");
+    auto metalMeshAO = engine->assets().texture_pool().insert("images/metal_2/Metal_Tiles_004_ambientOcclusion.jpg");
+    auto metalMeshNormal = engine->assets().texture_pool().insert("images/metal_2/Metal_Tiles_004_normal.jpg");
+    auto woodTexture = engine->assets().texture_pool().insert("images/wood.png");
 
-
-//    eagle::TextureCreateInfo cubemapCreateInfo = {};
-//    cubemapCreateInfo.imageCreateInfo.format = eagle::Format::R8G8B8A8_UNORM;
-//    cubemapCreateInfo.imageCreateInfo.width = 1;
-//    cubemapCreateInfo.imageCreateInfo.height = 1;
-//    cubemapCreateInfo.imageCreateInfo.arrayLayers = 6;
-//    cubemapCreateInfo.imageCreateInfo.type = eagle::ImageType::CUBE;
-//    cubemapCreateInfo.imageCreateInfo.aspects = {eagle::ImageAspect::COLOR};
-//    cubemapCreateInfo.imageCreateInfo.usages = {eagle::ImageUsage::TRANSFER_DST, eagle::ImageUsage::SAMPLED};
-//    cubemapCreateInfo.imageCreateInfo.memoryProperties = {eagle::MemoryProperty::DEVICE_LOCAL};
-//    cubemapCreateInfo.imageCreateInfo.mipLevels = 1;
-//    cubemapCreateInfo.imageCreateInfo.layout = eagle::ImageLayout::SHADER_READ_ONLY_OPTIMAL;
-//    cubemapCreateInfo.imageCreateInfo.tiling = eagle::ImageTiling::OPTIMAL;
-//    cubemapCreateInfo.imageCreateInfo.buffer = {
-//            255, 255, 255, 255, //face 0
-//            255, 255, 000, 255, //face 1
-//            255, 000, 255, 255, //face 2
-//            000, 255, 255, 255, //face 3
-//            255, 128, 255, 255, //face 4
-//            255, 128, 128, 255, //face 5
-//    };
-//    cubemapCreateInfo.filter = eagle::Filter::NEAREST;
-
-    auto cubemap = engine->asset_manager().texture_pool().insert({
+    auto cubemap = engine->assets().texture_pool().insert({
         "images/skybox/right.jpg",
         "images/skybox/left.jpg",
         "images/skybox/top.jpg",
@@ -324,16 +301,16 @@ void TemplateGame::init(beagle::Engine* engine) {
         "images/skybox/front.jpg",
         "images/skybox/back.jpg"
     });
-    auto skyboxMaterial = engine->asset_manager().material_pool().insert(skyboxShader);
+    auto skyboxMaterial = engine->assets().material_pool().insert(skyboxShader);
     skyboxMaterial->update_texture(0, cubemap);
 
 
-    auto metalicMaterial = engine->asset_manager().material_pool().insert(shader);
-    auto woodMaterial = engine->asset_manager().material_pool().insert(shader);
+    auto metalicMaterial = engine->assets().material_pool().insert(shader);
+    auto woodMaterial = engine->assets().material_pool().insert(shader);
 
     shaderCreateInfo.shaderStages[eagle::ShaderStage::FRAGMENT] = "shaders/mesh.frag.spv";
-    auto colorShader = engine->asset_manager().shader_pool().insert(shaderCreateInfo, "default");
-    auto lightMaterial = engine->asset_manager().material_pool().insert(colorShader);
+    auto colorShader = engine->assets().shader_pool().insert(shaderCreateInfo, "default");
+    auto lightMaterial = engine->assets().material_pool().insert(colorShader);
 
     lightMaterial->update_uniform(0, glm::vec3(1.0f));
 
@@ -344,7 +321,7 @@ void TemplateGame::init(beagle::Engine* engine) {
     woodMaterial->update_uniform(0, MaterialData{glm::vec4(0.2f, 0.7f, 0.5f, 1.0f), 0.1f, 0.6f, 8.0f});
     woodMaterial->update_texture(1, woodTexture);
 
-    auto material = engine->asset_manager().material_pool().insert(shader);
+    auto material = engine->assets().material_pool().insert(shader);
     material->update_uniform(0, MaterialData{glm::vec4(1.0f), 1.0f, 1.0f, 1.0f});
     material->update_texture(1, metalMeshAlbedo);
     material->update_texture(2, metalMeshMetallic);
@@ -399,7 +376,7 @@ void TemplateGame::init(beagle::Engine* engine) {
     e.assign<beagle::CameraProjection>();
     e.assign<beagle::Transform>();
     auto camera = e.assign<beagle::Camera>(context);
-    auto meshFilter = e.assign<beagle::MeshFilter>(context, &engine->asset_manager().mesh_pool());
+    auto meshFilter = e.assign<beagle::MeshFilter>(context, &engine->assets().mesh_pool());
     auto skyboxFilter = e.assign<beagle::SkyboxFilter>(context, skyboxMaterial);
     camera->secondaryCommandBuffers.emplace_back(meshFilter->commandBuffer);
     camera->secondaryCommandBuffers.emplace_back(skyboxFilter->commandBuffer);

@@ -38,7 +38,7 @@ public:
     bool receive(const eagle::OnWindowResized& ev);
 
     inline EntityManager& entities() { return m_entityManager; }
-    inline AssetManager& asset_manager() { return *m_assetManager; }
+    inline AssetManager& assets() { return *m_assetManager; }
     inline JobManager& jobs() { return m_jobSystem; }
     inline SystemManager& systems() { return m_systemManager; }
     inline eagle::Timer& timer() { return m_timer; }
