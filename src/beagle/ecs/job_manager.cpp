@@ -102,7 +102,7 @@ bool JobManager::has_available_job() {
 }
 
 bool JobManager::has_unfinished_job() {
-    return std::any_of(m_jobGraph.begin(), m_jobGraph.end(), [](const JobHandle& vertex){
+    return std::any_of(m_jobGraph.begin(), m_jobGraph.end(), [](const JobVertex& vertex){
         return !vertex.is_executed() && !vertex.is_disposable();
     });
 }
@@ -112,17 +112,17 @@ void JobManager::job_finished(size_t jobId, int64_t executionTime) {
     auto& vertex = m_jobGraph.vertex(jobId);
     vertex.set_executed(true);
     m_executionTimes.emplace_back(JobProfiling(vertex.m_job->name(), executionTime));
-    for(auto[connectionIndex, connectionRelation] : m_jobGraph.edges_from(jobId)){
-        if (connectionRelation != JobRelation::RUN_BEFORE){
-            continue;
-        }
-        auto& connectionVertex = m_jobGraph.vertex(connectionIndex);
-        if (is_job_available(connectionVertex.m_index)){
-            m_availableJobs.push(connectionIndex);
-        }
+    switch(vertex.m_job->result()){
+        case JobResult::SUCCESS:
+            enqueue_available_jobs_after(jobId);
+            break;
+        case JobResult::INTERRUPT:
+            interrupt_jobs_after(jobId);
+            break;
     }
 
     if (vertex.is_disposable()){
+        vertex.m_job.reset();
         m_jobGraph.erase(jobId);
     }
 
@@ -134,6 +134,29 @@ size_t JobManager::next_job() {
     auto id = m_availableJobs.front();
     m_availableJobs.pop();
     return id;
+}
+
+void JobManager::enqueue_available_jobs_after(size_t jobId) {
+    for(auto[connectionIndex, connectionRelation] : m_jobGraph.edges_from(jobId)){
+        if (connectionRelation != JobRelation::RUN_BEFORE){
+            continue;
+        }
+        auto& connectionVertex = m_jobGraph.vertex(connectionIndex);
+        if (is_job_available(connectionVertex.m_index)){
+            m_availableJobs.push(connectionIndex);
+        }
+    }
+}
+
+void JobManager::interrupt_jobs_after(size_t jobId) {
+    for(auto[connectionIndex, connectionRelation] : m_jobGraph.edges_from(jobId)){
+        if (connectionRelation != JobRelation::RUN_BEFORE){
+            continue;
+        }
+        auto& connectionVertex = m_jobGraph.vertex(connectionIndex);
+        connectionVertex.set_executed(true);
+        interrupt_jobs_after(connectionIndex);
+    }
 }
 
 }

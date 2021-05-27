@@ -17,33 +17,42 @@
 
 namespace beagle {
 
+
+enum class JobResult {
+    SUCCESS = 0,
+    INTERRUPT = 1
+};
+
 class BaseJob {
 public:
     explicit BaseJob(const std::string& name) : m_name(name) {}
 
     uint64_t timed_execute() {
         m_timer.start();
-        execute();
+        m_result = execute();
         m_timer.stop();
         return m_timer.time_nano();
     }
-    virtual void execute() = 0;
 
+    virtual JobResult execute() = 0;
+
+    JobResult result() const { return m_result; }
     const std::string& name() { return m_name; }
 
 private:
     eagle::Timer m_timer;
     std::string m_name;
+    JobResult m_result;
 };
 
 class Job : public BaseJob {
 public:
-    explicit Job(std::function<void()>&& task, const std::string& name = "Lambda") : BaseJob(name), m_task(task) {}
-    void execute() override {
-        m_task();
+    explicit Job(std::function<JobResult()>&& task, const std::string& name = "Lambda") : BaseJob(name), m_task(task) {}
+    JobResult execute() override {
+        return m_task();
     }
 private:
-    std::function<void()> m_task;
+    std::function<JobResult()> m_task;
 };
 
 class JobManager {
@@ -62,23 +71,16 @@ private:
         std::thread m_thread;
         bool m_stop = false;
     };
-public:
-    class JobHandle {
+private:
+    class JobVertex {
     public:
-        JobHandle() = default;
-        void run_after(const JobHandle& other) {
-            m_manager->add_dependency(m_index, other.m_index);
-        }
-
-        void run_before(const JobHandle& other) {
-            m_manager->add_dependency(other.m_index, m_index);
-        }
+        JobVertex() = default;
 
     private:
         friend JobManager;
         friend Worker;
 
-        JobHandle(JobManager* manager, std::shared_ptr<BaseJob>&& job) :
+        JobVertex(JobManager* manager, std::shared_ptr<BaseJob>&& job) :
                 m_manager(manager), m_job(std::forward<std::shared_ptr<BaseJob>>(job)) {}
 
         bool is_enqueued() const { return m_enqueued; }
@@ -96,14 +98,13 @@ public:
         bool m_executed = false;
         bool m_disposable = false;
     };
-private:
 
     enum class JobRelation {
         RUN_BEFORE,
         RUN_AFTER
     };
 
-    using JobGraph = Graph<JobHandle, JobRelation>;
+    using JobGraph = Graph<JobVertex, JobRelation>;
 
     struct JobProfiling {
         JobProfiling(const std::string& name, int64_t durationNano) :
@@ -111,6 +112,41 @@ private:
 
         const std::string& name;
         int64_t durationNano;
+    };
+public:
+
+    class JobHandle {
+    public:
+        JobHandle() = default;
+        JobHandle(size_t index, JobManager* manager) : m_index(index), m_manager(manager) {}
+
+        JobVertex& operator*(){
+            return m_manager->m_jobGraph.vertex(m_index);
+        }
+
+        JobVertex& operator->(){
+            return this->operator*();
+        }
+
+        JobVertex& operator*() const {
+            return m_manager->m_jobGraph.vertex(m_index);
+        }
+
+        JobVertex& operator->() const {
+            return this->operator*();
+        }
+
+        void run_after(const JobHandle& other){
+            m_manager->add_dependency(m_index, other.m_index);
+        }
+
+        void run_before(const JobHandle& other){
+            m_manager->add_dependency(other.m_index, m_index);
+        }
+
+    private:
+        size_t m_index = 0;
+        JobManager* m_manager = nullptr;
     };
 
 public:
@@ -120,23 +156,21 @@ public:
 
     template<typename TJob, typename ...Args>
     JobHandle enqueue(Args&& ...args) {
-        size_t index = m_jobGraph.insert(JobHandle(this, std::make_shared<TJob>(std::forward<Args>(args)...)));
+        size_t index = m_jobGraph.insert(JobVertex(this, std::make_shared<TJob>(std::forward<Args>(args)...)));
         auto& handle = m_jobGraph.vertex(index);
         handle.m_index = index;
-        return handle;
+        return {index, this};
     }
 
     template<typename TJob, typename ...Args>
-    JobHandle enqueue_disposable(Args&& ...args) {
-        size_t index = m_jobGraph.insert(JobHandle(this, std::make_shared<TJob>(std::forward<Args>(args)...)));
-        auto& handle = m_jobGraph.vertex(index);
-        handle.m_disposable = true;
-        handle.m_index = index;
+    JobHandle dispose(Args&& ...args) {
+        auto handle = enqueue<TJob, Args...>(std::forward<Args>(args)...);
+        handle->m_disposable = true;
         return handle;
     }
 
-
     void execute();
+
     const std::vector<JobProfiling>& job_profiling() const { return m_executionTimes; }
 
 private:
@@ -147,6 +181,8 @@ private:
     bool has_available_job();
     bool is_job_available(size_t jobId);
     void enqueue_available_jobs();
+    void enqueue_available_jobs_after(size_t jobId);
+    void interrupt_jobs_after(size_t jobId);
     void job_finished(size_t jobId, int64_t executionTime);
     size_t next_job();
 
