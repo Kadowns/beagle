@@ -199,7 +199,9 @@ public:
         Entity operator*() { return m_manager->entity_from_index(m_i); }
 
 
-        explicit Iterator(EntityManager *manager, size_t i) : m_manager(manager), m_i(i), m_capacity(m_manager->capacity()), m_freeCursor(0){}
+        explicit Iterator(EntityManager *manager, size_t i) : m_manager(manager), m_i(i), m_capacity(m_manager->capacity()), m_freeCursor(0){
+            next();
+        }
     protected:
         void next() {
             while (m_i < m_capacity && !valid_entity()) {
