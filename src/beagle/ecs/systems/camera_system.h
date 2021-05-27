@@ -19,7 +19,7 @@ namespace beagle {
 class CameraUpdateOrthographicProjectionJob : public BaseJob {
 public:
     CameraUpdateOrthographicProjectionJob(EntityManager* entities, float width, float height);
-    void execute() override;
+    JobResult execute() override;
 
     bool receive(const eagle::OnWindowResized& ev);
 
@@ -34,7 +34,7 @@ private:
 class CameraUpdatePerspectiveProjectionJob : public BaseJob {
 public:
     CameraUpdatePerspectiveProjectionJob(EntityManager* entities, float width, float height);
-    void execute() override;
+    JobResult execute() override;
 
     bool receive(const eagle::OnWindowResized& ev);
 
@@ -50,7 +50,7 @@ private:
 class RenderCameraJob : public BaseJob {
 public:
     explicit RenderCameraJob(EntityManager* manager);
-    void execute() override;
+    JobResult execute() override;
 private:
     EntityGroup<Camera> m_cameraGroup;
 };

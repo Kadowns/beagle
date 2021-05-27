@@ -19,7 +19,7 @@ namespace beagle {
 class MeshFilterUpdateVertexUboJob : public BaseJob {
 public:
     explicit MeshFilterUpdateVertexUboJob(EntityManager* entities);
-    void execute() override;
+    JobResult execute() override;
 
     bool receive(const OnCameraUpdate& ev);
 
@@ -34,7 +34,7 @@ class MeshFilterUpdateInstanceBufferJob : public BaseJob {
 public:
     explicit MeshFilterUpdateInstanceBufferJob(EntityManager* manager);
 
-    void execute() override;
+    JobResult execute() override;
 
 private:
     EntityGroup<Transform, MeshRenderer> m_meshRendererGroup;
@@ -44,7 +44,7 @@ private:
 class MeshFilterUpdateFragmentUboJob : public BaseJob {
 public:
     explicit MeshFilterUpdateFragmentUboJob(EntityManager* manager);
-    void execute() override;
+    JobResult execute() override;
 
 private:
     EntityManager* m_manager;
@@ -58,7 +58,7 @@ class MeshFilterRenderJob : public BaseJob {
 public:
     explicit MeshFilterRenderJob(EntityManager* manager);
 
-    void execute() override;
+    JobResult execute() override;
 
 private:
     EntityGroup<Camera, MeshFilter> m_meshFilterGroup;

@@ -13,9 +13,9 @@ MeshFilterUpdateVertexUboJob::MeshFilterUpdateVertexUboJob(EntityManager* entiti
     m_manager = entities;
 }
 
-void MeshFilterUpdateVertexUboJob::execute() {
+JobResult MeshFilterUpdateVertexUboJob::execute() {
     if (m_dirtyCameras.empty()){
-        return;
+        return JobResult::SUCCESS;
     }
 
     MeshFilter::VertexUbo ubo = {};
@@ -27,6 +27,7 @@ void MeshFilterUpdateVertexUboJob::execute() {
         cameraUbo->upload();
     }
     m_dirtyCameras.clear();
+    return JobResult::SUCCESS;
 }
 
 bool MeshFilterUpdateVertexUboJob::receive(const OnCameraUpdate& ev) {
@@ -40,7 +41,7 @@ MeshFilterUpdateInstanceBufferJob::MeshFilterUpdateInstanceBufferJob(EntityManag
     m_meshFilterGroup.attach(manager);
 }
 
-void MeshFilterUpdateInstanceBufferJob::execute() {
+JobResult MeshFilterUpdateInstanceBufferJob::execute() {
 
     class MeshGroup {
     public:
@@ -157,6 +158,7 @@ void MeshFilterUpdateInstanceBufferJob::execute() {
         }
         ib->upload();
     }
+    return JobResult::SUCCESS;
 }
 
 MeshFilterUpdateFragmentUboJob::MeshFilterUpdateFragmentUboJob(EntityManager* manager) : BaseJob("MeshFilterUpdateFragmentUboJob"), m_manager(manager) {
@@ -165,7 +167,7 @@ MeshFilterUpdateFragmentUboJob::MeshFilterUpdateFragmentUboJob(EntityManager* ma
     m_pointLightGroup.attach(manager);
 }
 
-void MeshFilterUpdateFragmentUboJob::execute() {
+JobResult MeshFilterUpdateFragmentUboJob::execute() {
 
     MeshFilter::FragmentUbo ubo = {};
 
@@ -198,6 +200,7 @@ void MeshFilterUpdateFragmentUboJob::execute() {
         fragmentUbo->copy_from(&ubo, sizeof(ubo), 0);
         fragmentUbo->upload();
     }
+    return JobResult::SUCCESS;
 }
 
 
@@ -205,7 +208,7 @@ MeshFilterRenderJob::MeshFilterRenderJob(EntityManager* manager) : BaseJob("Mesh
     m_meshFilterGroup.attach(manager);
 }
 
-void MeshFilterRenderJob::execute() {
+JobResult MeshFilterRenderJob::execute() {
 
     for (auto[camera, filter] : m_meshFilterGroup){
         auto commandBuffer = filter->commandBuffer.lock();
@@ -235,6 +238,7 @@ void MeshFilterRenderJob::execute() {
 
         commandBuffer->end();
     }
+    return JobResult::SUCCESS;
 }
 
 void MeshFilterSystem::configure(Engine* engine) {

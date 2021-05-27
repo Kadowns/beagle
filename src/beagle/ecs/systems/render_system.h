@@ -17,7 +17,7 @@ namespace beagle {
 class RenderBeginJob : public BaseJob {
 public:
     explicit RenderBeginJob(eagle::RenderingContext* context);
-    void execute() override;
+    JobResult execute() override;
 private:
     eagle::RenderingContext* m_context;
 };
@@ -25,7 +25,7 @@ private:
 class RenderEndJob : public BaseJob {
 public:
     explicit RenderEndJob(eagle::RenderingContext* context);
-    void execute() override;
+    JobResult execute() override;
 private:
     eagle::RenderingContext* m_context;
 };

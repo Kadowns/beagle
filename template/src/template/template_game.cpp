@@ -404,6 +404,7 @@ void TemplateGame::init(beagle::Engine* engine) {
         for (auto[rotation, rotator] : m_rotatorGroup){
             rotation->quat = glm::quat(glm::radians(t * rotator->frequency));
         }
+        return beagle::JobResult::SUCCESS;
     }, "Rotator");
 
     auto oscilatorJob = engine->jobs().enqueue<beagle::Job>([this, engine]{
@@ -412,6 +413,7 @@ void TemplateGame::init(beagle::Engine* engine) {
         for (auto[tr, osc] : m_oscilatorGroup){
             tr->vec.x = osc->anchor.x + sinf(t * osc->frequency) * osc->amplitude;
         }
+        return beagle::JobResult::SUCCESS;
     }, "Oscilator");
 
     auto scalerJob = engine->jobs().enqueue<beagle::Job>([this, engine]{
@@ -424,6 +426,7 @@ void TemplateGame::init(beagle::Engine* engine) {
             scale = glm::vec3(1) * abs((sinf(frequency * t) * amplitude));
             tr->vec = scale;
         }
+        return beagle::JobResult::SUCCESS;
     }, "Scaler");
     auto cameraControllerJob = engine->jobs().enqueue<CameraControlJob>(&engine->entities(), &engine->timer());
     transformSystem->updateMatricesJob.run_after(cameraControllerJob);

@@ -17,7 +17,7 @@
 class CameraControlJob : public beagle::BaseJob {
 public:
     explicit CameraControlJob(beagle::EntityManager* manager, eagle::Timer* timer);
-    void execute() override;
+    beagle::JobResult execute() override;
 
 private:
     beagle::EntityGroup<beagle::Position, beagle::Rotation, CameraController, beagle::Camera> m_cameraPositionGroup;

@@ -12,7 +12,7 @@ CameraControlJob::CameraControlJob(beagle::EntityManager* manager, eagle::Timer*
     m_eventBus = &manager->event_bus();
 }
 
-void CameraControlJob::execute() {
+beagle::JobResult CameraControlJob::execute() {
 
     auto dt = m_timer->delta_time();
 
@@ -88,4 +88,5 @@ void CameraControlJob::execute() {
 
         input.refresh();
     }
+    return beagle::JobResult::SUCCESS;
 }

@@ -17,9 +17,9 @@ CameraUpdateOrthographicProjectionJob::CameraUpdateOrthographicProjectionJob(Ent
     m_cameraGroup.attach(entities);
 }
 
-void CameraUpdateOrthographicProjectionJob::execute() {
+JobResult CameraUpdateOrthographicProjectionJob::execute() {
     if (!m_windowResized){
-        return;
+        return JobResult::SUCCESS;
     }
     m_windowResized = false;
 
@@ -40,6 +40,7 @@ void CameraUpdateOrthographicProjectionJob::execute() {
 
         m_eventBus->emit(OnCameraUpdate{projection.owner().id()});
     }
+    return JobResult::SUCCESS;
 }
 
 bool CameraUpdateOrthographicProjectionJob::receive(const eagle::OnWindowResized& ev) {
@@ -59,9 +60,9 @@ CameraUpdatePerspectiveProjectionJob::CameraUpdatePerspectiveProjectionJob(Entit
     m_cameraGroup.attach(entities);
 }
 
-void CameraUpdatePerspectiveProjectionJob::execute() {
+JobResult CameraUpdatePerspectiveProjectionJob::execute() {
     if (!m_windowResized){
-        return;
+        return JobResult::SUCCESS;
     }
     m_windowResized = false;
 
@@ -71,6 +72,7 @@ void CameraUpdatePerspectiveProjectionJob::execute() {
         projection->matrix[1][1] *= -1;
         m_eventBus->emit(OnCameraUpdate{projection.owner().id()});
     }
+    return JobResult::SUCCESS;
 }
 
 bool CameraUpdatePerspectiveProjectionJob::receive(const eagle::OnWindowResized& ev) {
@@ -84,7 +86,7 @@ RenderCameraJob::RenderCameraJob(EntityManager* manager) : BaseJob("RenderCamera
     m_cameraGroup.attach(manager);
 }
 
-void RenderCameraJob::execute() {
+JobResult RenderCameraJob::execute() {
 
     for (auto[camera] : m_cameraGroup){
 
@@ -102,6 +104,7 @@ void RenderCameraJob::execute() {
         commandBuffer->end();
         camera->context->submit_command_buffer(commandBuffer);
     }
+    return JobResult::SUCCESS;
 }
 
 void CameraSystem::configure(Engine* engine) {

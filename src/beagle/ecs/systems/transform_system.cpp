@@ -11,7 +11,7 @@ TransformUpdateMatricesJob::TransformUpdateMatricesJob(EntityManager* manager) :
     m_transformGroup.attach(manager);
 }
 
-void TransformUpdateMatricesJob::execute() {
+JobResult TransformUpdateMatricesJob::execute() {
     for (auto[tr] : m_transformGroup) {
         auto entity = tr.owner();
         glm::mat4 matrix(1);
@@ -27,6 +27,7 @@ void TransformUpdateMatricesJob::execute() {
         tr->matrix = matrix;
         tr->inverseMatrix = glm::inverse(matrix);
     }
+    return JobResult::SUCCESS;
 }
 
 void TransformSystem::configure(Engine* engine) {

@@ -15,7 +15,7 @@ SkyboxFilterUpdateVertexUboJob::SkyboxFilterUpdateVertexUboJob(EntityManager* ma
     m_listener.receive<OnCameraUpdate>(this);
 }
 
-void SkyboxFilterUpdateVertexUboJob::execute() {
+JobResult SkyboxFilterUpdateVertexUboJob::execute() {
 
     SkyboxFilter::VertexUbo ubo = {};
     for (auto entityId : m_dirtyCameras) {
@@ -26,7 +26,7 @@ void SkyboxFilterUpdateVertexUboJob::execute() {
         cameraUbo->upload();
     }
     m_dirtyCameras.clear();
-
+    return JobResult::SUCCESS;
 }
 
 bool SkyboxFilterUpdateVertexUboJob::receive(const OnCameraUpdate& ev) {
@@ -42,7 +42,7 @@ SkyboxFilterRenderJob::SkyboxFilterRenderJob(EntityManager* manager) : BaseJob("
     m_filterGroup.attach(manager);
 }
 
-void SkyboxFilterRenderJob::execute() {
+JobResult SkyboxFilterRenderJob::execute() {
     for (auto[camera, filter] : m_filterGroup) {
 
         auto commandBuffer = filter->commandBuffer.lock();
@@ -54,6 +54,7 @@ void SkyboxFilterRenderJob::execute() {
         commandBuffer->draw(36);
         commandBuffer->end();
     }
+    return JobResult::SUCCESS;
 }
 
 void SkyboxFilterSystem::configure(Engine* engine) {

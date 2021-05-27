@@ -14,18 +14,20 @@ RenderBeginJob::RenderBeginJob(eagle::RenderingContext* context) : m_context(con
 
 }
 
-void RenderBeginJob::execute() {
+JobResult RenderBeginJob::execute() {
     if (!m_context->prepare_frame()){
-        return;
+        return JobResult::INTERRUPT;
     }
+    return JobResult::SUCCESS;
 }
 
 RenderEndJob::RenderEndJob(eagle::RenderingContext* context) : m_context(context), BaseJob("RenderEndJob") {
 
 }
 
-void RenderEndJob::execute() {
+JobResult RenderEndJob::execute() {
     m_context->present_frame();
+    return JobResult::SUCCESS;
 }
 
 void RenderSystem::configure(Engine* engine) {

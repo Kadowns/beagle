@@ -17,7 +17,7 @@ namespace beagle {
 class SkyboxFilterUpdateVertexUboJob : public BaseJob {
 public:
     explicit SkyboxFilterUpdateVertexUboJob(EntityManager* entities);
-    void execute() override;
+    JobResult execute() override;
 
     bool receive(const OnCameraUpdate& ev);
 
@@ -30,7 +30,7 @@ private:
 class SkyboxFilterRenderJob : public BaseJob {
 public:
     explicit SkyboxFilterRenderJob(EntityManager* manager);
-    void execute() override;
+    JobResult execute() override;
 private:
     EntityGroup<Camera, SkyboxFilter> m_filterGroup;
 };
