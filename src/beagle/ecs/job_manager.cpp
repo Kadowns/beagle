@@ -24,7 +24,7 @@ JobManager::Worker::Worker(JobManager* manager) : m_manager(manager) {
            if (m_stop) {
                return;
            }
-           int64_t time = m_manager->m_jobGraph.vertex(m_currentJobIndex)->m_job->timed_execute();
+           int64_t time = m_manager->m_jobGraph.vertex(m_currentJobIndex).m_job->timed_execute();
            m_manager->job_finished(m_currentJobIndex, time);
        }
     });
@@ -55,9 +55,9 @@ JobManager::~JobManager() {
 void JobManager::execute() {
 
     m_executionTimes.clear();
-    for (auto vertex : m_jobGraph){
-        vertex->set_executed(false);
-        vertex->set_enqueued(false);
+    for (auto& vertex : m_jobGraph){
+        vertex.set_executed(false);
+        vertex.set_enqueued(false);
     }
     enqueue_available_jobs();
 
@@ -70,22 +70,22 @@ void JobManager::execute() {
 
 void JobManager::enqueue_available_jobs() {
     std::unique_lock<std::mutex> lock(m_queueMutex);
-    for (auto jobVertex : m_jobGraph){
-        if (is_job_available(jobVertex->m_index)){
-            m_availableJobs.push(jobVertex->m_index);
-            jobVertex->set_enqueued(true);
+    for (auto& jobVertex : m_jobGraph){
+        if (is_job_available(jobVertex.m_index)){
+            m_availableJobs.push(jobVertex.m_index);
+            jobVertex.set_enqueued(true);
         }
     }
 }
 
 bool JobManager::is_job_available(size_t jobId) {
-    auto vertex = m_jobGraph.vertex(jobId);
-    if (vertex->is_enqueued()){
+    auto& vertex = m_jobGraph.vertex(jobId);
+    if (vertex.is_enqueued()){
         return false;
     }
-    for (auto[connectionIndex, connectionRelation] : m_jobGraph.edges_from(vertex->m_index)){
+    for (auto[connectionIndex, connectionRelation] : m_jobGraph.edges_from(vertex.m_index)){
         auto connectedJobVertex = m_jobGraph.vertex(connectionIndex);
-        if (connectionRelation == JobRelation::RUN_AFTER && !connectedJobVertex->is_executed()){
+        if (connectionRelation == JobRelation::RUN_AFTER && !connectedJobVertex.is_executed()){
             return false;
         }
     }
@@ -102,23 +102,30 @@ bool JobManager::has_available_job() {
 }
 
 bool JobManager::has_unfinished_job() {
-    return std::any_of(m_jobGraph.begin(), m_jobGraph.end(), [](JobHandle* vertex){return !vertex->is_executed();});
+    return std::any_of(m_jobGraph.begin(), m_jobGraph.end(), [](const JobHandle& vertex){
+        return !vertex.is_executed() && !vertex.is_disposable();
+    });
 }
 
 void JobManager::job_finished(size_t jobId, int64_t executionTime) {
     std::unique_lock<std::mutex> lock(m_queueMutex);
-    auto vertex = m_jobGraph.vertex(jobId);
-    vertex->set_executed(true);
-    m_executionTimes.emplace_back(JobProfiling(vertex->m_job->name(), executionTime));
+    auto& vertex = m_jobGraph.vertex(jobId);
+    vertex.set_executed(true);
+    m_executionTimes.emplace_back(JobProfiling(vertex.m_job->name(), executionTime));
     for(auto[connectionIndex, connectionRelation] : m_jobGraph.edges_from(jobId)){
         if (connectionRelation != JobRelation::RUN_BEFORE){
             continue;
         }
-        auto connectionVertex = m_jobGraph.vertex(connectionIndex);
-        if (is_job_available(connectionVertex->m_index)){
+        auto& connectionVertex = m_jobGraph.vertex(connectionIndex);
+        if (is_job_available(connectionVertex.m_index)){
             m_availableJobs.push(connectionIndex);
         }
     }
+
+    if (vertex.is_disposable()){
+        m_jobGraph.erase(jobId);
+    }
+
     lock.unlock();
     m_awakeWorker.notify_all();
 }

@@ -13,7 +13,7 @@
 
 #include <eagle/timer.h>
 
-#include <grapphs/adjacency_list.h>
+#include <beagle/utils/graph.h>
 
 namespace beagle {
 
@@ -78,11 +78,12 @@ public:
         friend JobManager;
         friend Worker;
 
-        JobHandle(JobManager* manager, size_t index, std::shared_ptr<BaseJob>&& job) :
-                m_manager(manager), m_index(index), m_job(std::forward<std::shared_ptr<BaseJob>>(job)) {}
+        JobHandle(JobManager* manager, std::shared_ptr<BaseJob>&& job) :
+                m_manager(manager), m_job(std::forward<std::shared_ptr<BaseJob>>(job)) {}
 
         bool is_enqueued() const { return m_enqueued; }
         bool is_executed() const { return m_executed; }
+        bool is_disposable() const { return m_disposable; }
 
         void set_enqueued(bool value) { m_enqueued = value; }
         void set_executed(bool value) { m_executed = value; }
@@ -93,6 +94,7 @@ public:
         size_t m_index = 0;
         bool m_enqueued = false;
         bool m_executed = false;
+        bool m_disposable = false;
     };
 private:
 
@@ -101,7 +103,7 @@ private:
         RUN_AFTER
     };
 
-    using JobGraph = gpp::AdjacencyList<JobHandle, JobRelation>;
+    using JobGraph = Graph<JobHandle, JobRelation>;
 
     struct JobProfiling {
         JobProfiling(const std::string& name, int64_t durationNano) :
@@ -118,10 +120,21 @@ public:
 
     template<typename TJob, typename ...Args>
     JobHandle enqueue(Args&& ...args) {
-        auto handle = JobHandle(this, m_jobGraph.size(), std::make_shared<TJob>(std::forward<Args>(args)...));
-        m_jobGraph.push(handle);
+        size_t index = m_jobGraph.insert(JobHandle(this, std::make_shared<TJob>(std::forward<Args>(args)...)));
+        auto& handle = m_jobGraph.vertex(index);
+        handle.m_index = index;
         return handle;
     }
+
+    template<typename TJob, typename ...Args>
+    JobHandle enqueue_disposable(Args&& ...args) {
+        size_t index = m_jobGraph.insert(JobHandle(this, std::make_shared<TJob>(std::forward<Args>(args)...)));
+        auto& handle = m_jobGraph.vertex(index);
+        handle.m_disposable = true;
+        handle.m_index = index;
+        return handle;
+    }
+
 
     void execute();
     const std::vector<JobProfiling>& job_profiling() const { return m_executionTimes; }
