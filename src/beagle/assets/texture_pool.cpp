@@ -43,28 +43,55 @@ TextureHandle TexturePool::insert(const std::string& filepath) {
     eagle::TextureCreateInfo textureCreateInfo = {};
     int width, height, bpp;
 
-    auto buffer = (uint8_t*) stbi_load_from_memory(bytes.data(), bytes.size(), &width, &height, &bpp, STBI_rgb_alpha);
-    if (!buffer) {
-        throw std::runtime_error("Failed to load image: " + std::string(stbi_failure_reason()));
+
+    if (stbi_is_hdr_from_memory(bytes.data(), bytes.size())){
+        float* buffer = stbi_loadf_from_memory(bytes.data(), bytes.size(), &width, &height, &bpp, STBI_rgb_alpha);
+        if (!buffer) {
+            throw std::runtime_error("Failed to load image: " + std::string(stbi_failure_reason()));
+        }
+
+        textureCreateInfo.imageCreateInfo.width = width;
+        textureCreateInfo.imageCreateInfo.height = height;
+        size_t len = width * height * 4 * sizeof(float);
+
+        textureCreateInfo.imageCreateInfo.buffer.resize(len);
+        memcpy(textureCreateInfo.imageCreateInfo.buffer.data(), buffer, len);
+        stbi_image_free(buffer);
+
+        textureCreateInfo.imageCreateInfo.format = eagle::Format::R32G32B32A32_SFLOAT;
+        textureCreateInfo.imageCreateInfo.mipLevels = 1;
+        textureCreateInfo.imageCreateInfo.arrayLayers = 1;
+        textureCreateInfo.imageCreateInfo.tiling = eagle::ImageTiling::LINEAR;
+        textureCreateInfo.imageCreateInfo.memoryProperties = {eagle::MemoryProperty::DEVICE_LOCAL};
+        textureCreateInfo.imageCreateInfo.aspects = {eagle::ImageAspect::COLOR};
+        textureCreateInfo.imageCreateInfo.usages = {eagle::ImageUsage::SAMPLED, eagle::ImageUsage::TRANSFER_DST};
+        textureCreateInfo.imageCreateInfo.layout = eagle::ImageLayout::SHADER_READ_ONLY_OPTIMAL;
+        textureCreateInfo.filter = eagle::Filter::LINEAR;
     }
+    else {
+        uint8_t* buffer = stbi_load_from_memory(bytes.data(), bytes.size(), &width, &height, &bpp, STBI_rgb_alpha);
+        if (!buffer) {
+            throw std::runtime_error("Failed to load image: " + std::string(stbi_failure_reason()));
+        }
 
-    textureCreateInfo.imageCreateInfo.width = width;
-    textureCreateInfo.imageCreateInfo.height = height;
-    int len = width * height * 4;
+        textureCreateInfo.imageCreateInfo.width = width;
+        textureCreateInfo.imageCreateInfo.height = height;
+        int len = width * height * 4;
 
-    textureCreateInfo.imageCreateInfo.buffer.resize(len);
-    memcpy(textureCreateInfo.imageCreateInfo.buffer.data(), buffer, len);
-    stbi_image_free(buffer);
+        textureCreateInfo.imageCreateInfo.buffer.resize(len);
+        memcpy(textureCreateInfo.imageCreateInfo.buffer.data(), buffer, len);
+        stbi_image_free(buffer);
 
-    textureCreateInfo.imageCreateInfo.format = eagle::Format::R8G8B8A8_UNORM;
-    textureCreateInfo.imageCreateInfo.mipLevels = 1;
-    textureCreateInfo.imageCreateInfo.arrayLayers = 1;
-    textureCreateInfo.imageCreateInfo.tiling = eagle::ImageTiling::LINEAR;
-    textureCreateInfo.imageCreateInfo.memoryProperties = {eagle::MemoryProperty::DEVICE_LOCAL};
-    textureCreateInfo.imageCreateInfo.aspects = {eagle::ImageAspect::COLOR};
-    textureCreateInfo.imageCreateInfo.usages = {eagle::ImageUsage::SAMPLED, eagle::ImageUsage::TRANSFER_DST};
-    textureCreateInfo.imageCreateInfo.layout = eagle::ImageLayout::SHADER_READ_ONLY_OPTIMAL;
-    textureCreateInfo.filter = eagle::Filter::LINEAR;
+        textureCreateInfo.imageCreateInfo.format = eagle::Format::R8G8B8A8_UNORM;
+        textureCreateInfo.imageCreateInfo.mipLevels = 1;
+        textureCreateInfo.imageCreateInfo.arrayLayers = 1;
+        textureCreateInfo.imageCreateInfo.tiling = eagle::ImageTiling::LINEAR;
+        textureCreateInfo.imageCreateInfo.memoryProperties = {eagle::MemoryProperty::DEVICE_LOCAL};
+        textureCreateInfo.imageCreateInfo.aspects = {eagle::ImageAspect::COLOR};
+        textureCreateInfo.imageCreateInfo.usages = {eagle::ImageUsage::SAMPLED, eagle::ImageUsage::TRANSFER_DST};
+        textureCreateInfo.imageCreateInfo.layout = eagle::ImageLayout::SHADER_READ_ONLY_OPTIMAL;
+        textureCreateInfo.filter = eagle::Filter::LINEAR;
+    }
     return insert(textureCreateInfo);
 }
 
