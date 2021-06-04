@@ -22,6 +22,8 @@ set(SHADERS
         assets/shaders/pbr/pbr_mesh.frag
         assets/shaders/skybox/skybox.frag
         assets/shaders/skybox/skybox.vert
+        assets/shaders/compute/unwrap_skybox.comp
+        assets/shaders/compute/cubemap_irradiance.comp
         )
 
 foreach (SHADER ${SHADERS})

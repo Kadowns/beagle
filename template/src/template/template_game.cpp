@@ -278,6 +278,56 @@ void TemplateGame::init(beagle::Engine* engine) {
     auto skyboxShader = engine->assets().shader_pool().insert(skyboxShaderCreateInfo, "skybox");
 
 
+    auto hdrImage = engine->assets().texture_pool().insert("images/skybox/stars.hdr");
+
+    eagle::TextureCreateInfo cubemapCreateInfo = {};
+    cubemapCreateInfo.imageCreateInfo.width = 512;
+    cubemapCreateInfo.imageCreateInfo.height = 512;
+    cubemapCreateInfo.imageCreateInfo.format = eagle::Format::R32G32B32A32_SFLOAT;
+    cubemapCreateInfo.imageCreateInfo.mipLevels = 1;
+    cubemapCreateInfo.imageCreateInfo.arrayLayers = 6;
+    cubemapCreateInfo.imageCreateInfo.tiling = eagle::ImageTiling::OPTIMAL;
+    cubemapCreateInfo.imageCreateInfo.memoryProperties = {eagle::MemoryProperty::DEVICE_LOCAL};
+    cubemapCreateInfo.imageCreateInfo.aspects = {eagle::ImageAspect::COLOR};
+    cubemapCreateInfo.imageCreateInfo.usages = {eagle::ImageUsage::SAMPLED, eagle::ImageUsage::TRANSFER_DST, eagle::ImageUsage::STORAGE};
+    cubemapCreateInfo.imageCreateInfo.layout = eagle::ImageLayout::GENERAL;
+    cubemapCreateInfo.filter = eagle::Filter::LINEAR;
+    cubemapCreateInfo.imageCreateInfo.type = eagle::ImageType::CUBE;
+    auto skyboxImage = engine->assets().texture_pool().insert(cubemapCreateInfo);
+
+    auto computeShader = context->create_compute_shader("shaders/compute/unwrap_skybox.comp.spv");
+    computeShader->update_image(0, skyboxImage->get()->image());
+    computeShader->update_image(1, *hdrImage);
+    computeShader->update_descriptors();
+
+    computeShader->dispatch(512 / 8, 512 / 8, 1);
+
+    computeShader->join();
+
+    eagle::TextureCreateInfo irradianceMapCreateInfo = {};
+    irradianceMapCreateInfo.imageCreateInfo.width = 32;
+    irradianceMapCreateInfo.imageCreateInfo.height = 32;
+    irradianceMapCreateInfo.imageCreateInfo.format = eagle::Format::R32G32B32A32_SFLOAT;
+    irradianceMapCreateInfo.imageCreateInfo.mipLevels = 1;
+    irradianceMapCreateInfo.imageCreateInfo.arrayLayers = 6;
+    irradianceMapCreateInfo.imageCreateInfo.tiling = eagle::ImageTiling::OPTIMAL;
+    irradianceMapCreateInfo.imageCreateInfo.memoryProperties = {eagle::MemoryProperty::DEVICE_LOCAL};
+    irradianceMapCreateInfo.imageCreateInfo.aspects = {eagle::ImageAspect::COLOR};
+    irradianceMapCreateInfo.imageCreateInfo.usages = {eagle::ImageUsage::SAMPLED, eagle::ImageUsage::STORAGE};
+    irradianceMapCreateInfo.imageCreateInfo.layout = eagle::ImageLayout::GENERAL;
+    irradianceMapCreateInfo.filter = eagle::Filter::LINEAR;
+    irradianceMapCreateInfo.imageCreateInfo.type = eagle::ImageType::CUBE;
+    auto irradianceMap = engine->assets().texture_pool().insert(irradianceMapCreateInfo);
+
+    auto irradiannceComputeShader = context->create_compute_shader("shaders/compute/cubemap_irradiance.comp.spv");
+    irradiannceComputeShader->update_image(0, irradianceMap->get()->image());
+    irradiannceComputeShader->update_image(1, *skyboxImage);
+    irradiannceComputeShader->update_descriptors();
+
+    irradiannceComputeShader->dispatch(32 / 8, 32 / 8, 1);
+
+    irradiannceComputeShader->join();
+
     struct MaterialData {
         alignas(16) glm::vec4 albedo;
         float metallic;
@@ -293,16 +343,16 @@ void TemplateGame::init(beagle::Engine* engine) {
     auto metalMeshNormal = engine->assets().texture_pool().insert("images/metal_2/Metal_Tiles_004_normal.jpg");
     auto woodTexture = engine->assets().texture_pool().insert("images/wood.png");
 
-    auto cubemap = engine->assets().texture_pool().insert({
-        "images/skybox/right.jpg",
-        "images/skybox/left.jpg",
-        "images/skybox/top.jpg",
-        "images/skybox/bottom.jpg",
-        "images/skybox/front.jpg",
-        "images/skybox/back.jpg"
-    });
+//    auto cubemap = engine->assets().texture_pool().insert({
+//        "images/skybox/right.jpg",
+//        "images/skybox/left.jpg",
+//        "images/skybox/top.jpg",
+//        "images/skybox/bottom.jpg",
+//        "images/skybox/front.jpg",
+//        "images/skybox/back.jpg"
+//    });
     auto skyboxMaterial = engine->assets().material_pool().insert(skyboxShader);
-    skyboxMaterial->update_texture(0, cubemap);
+    skyboxMaterial->update_texture(0, irradianceMap);
 
 
     auto metalicMaterial = engine->assets().material_pool().insert(shader);
@@ -316,8 +366,7 @@ void TemplateGame::init(beagle::Engine* engine) {
 
 
     metalicMaterial->update_uniform(0, MaterialData{glm::vec4(0.7f, 0.3f, 0.3f, 1.0f), 1.0f, 0.7f, 0.2f});
-//    material->update_texture(1, wallTexture);
-//    metalicMaterial->update_texture(1, wallTexture);
+
     woodMaterial->update_uniform(0, MaterialData{glm::vec4(0.2f, 0.7f, 0.5f, 1.0f), 0.1f, 0.6f, 8.0f});
     woodMaterial->update_texture(1, woodTexture);
 
@@ -328,8 +377,7 @@ void TemplateGame::init(beagle::Engine* engine) {
     material->update_texture(3, metalMeshRoughness);
     material->update_texture(4, metalMeshAO);
     material->update_texture(5, metalMeshNormal);
-//    material->update_texture(6, cubemap);
-//    material->update_texture(6, metalMeshOpacity);
+
 
     const int entityCount = 100;
     const float range = 30.0f;
@@ -382,7 +430,7 @@ void TemplateGame::init(beagle::Engine* engine) {
     camera->secondaryCommandBuffers.emplace_back(skyboxFilter->commandBuffer);
     auto controller = e.assign<CameraController>(&eagle::Application::instance().event_bus());
     controller->speed = 10.0f;
-    controller->mouseSpeed = 6.0f;
+    controller->mouseSpeed = 32.0f;
 
 
     auto transformSystem = engine->systems().attach<beagle::TransformSystem>();
@@ -390,7 +438,6 @@ void TemplateGame::init(beagle::Engine* engine) {
     auto renderSystem = engine->systems().attach<beagle::RenderSystem>();
     auto meshFilterSystem = engine->systems().attach<beagle::MeshFilterSystem>();
     auto cameraSystem = engine->systems().attach<beagle::CameraSystem>();
-
 
 
     m_oscilatorGroup.attach(&engine->entities());

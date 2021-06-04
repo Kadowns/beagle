@@ -8,5 +8,8 @@ layout(location = 0) in vec3 vTexCoord;
 layout(location = 0) out vec4 outColor;
 
 void main() {
-    outColor = texture(uSkybox, vTexCoord);
+    vec3 color = texture(uSkybox, vTexCoord).rgb;
+    color = color / (color + vec3(1.0));
+    color = pow(color, vec3(1.0/2.2));
+    outColor = vec4(color, 1.0);
 }
