@@ -22,9 +22,8 @@ JobResult MeshFilterUpdateVertexUboJob::execute() {
     for (auto entityId : m_dirtyCameras) {
         auto[filter, projection, transform] = m_manager->entity_from_id(entityId).components<MeshFilter, CameraProjection, Transform>();
         ubo.vp = projection->matrix * transform->inverseMatrix;
-        auto cameraUbo = filter->vertexShaderUbo.lock();
-        cameraUbo->copy_from(&ubo, sizeof(ubo), 0);
-        cameraUbo->upload();
+        filter->vertexShaderUbo->copy_from(&ubo, sizeof(ubo), 0);
+        filter->vertexShaderUbo->upload();
     }
     m_dirtyCameras.clear();
     return JobResult::SUCCESS;
@@ -139,7 +138,7 @@ JobResult MeshFilterUpdateInstanceBufferJob::execute() {
 
     for (auto[filter] : m_meshFilterGroup){
         filter->materialGroups.clear();
-        auto ib = filter->instanceBuffer.lock();
+        auto ib = filter->instanceBuffer;
         ib->clear();
         ib->reserve(m_meshRendererGroup.size() * sizeof(glm::mat4) * 2);
         size_t instanceOffset = 0;
@@ -196,7 +195,7 @@ JobResult MeshFilterUpdateFragmentUboJob::execute() {
 
     for (auto[position, filter] : m_meshFilterGroup) {
         ubo.viewPosition = position->vec;
-        auto fragmentUbo = filter->fragmentShaderUbo.lock();
+        auto fragmentUbo = filter->fragmentShaderUbo;
         fragmentUbo->copy_from(&ubo, sizeof(ubo), 0);
         fragmentUbo->upload();
     }
@@ -211,17 +210,17 @@ MeshFilterRenderJob::MeshFilterRenderJob(EntityManager* manager) : BaseJob("Mesh
 JobResult MeshFilterRenderJob::execute() {
 
     for (auto[camera, filter] : m_meshFilterGroup){
-        auto commandBuffer = filter->commandBuffer.lock();
+        auto commandBuffer = filter->commandBuffer;
 
-        commandBuffer->begin(camera->renderPass.lock(), camera->framebuffer.lock());
+        commandBuffer->begin(camera->renderPass, camera->framebuffer);
 
         commandBuffer->bind_index_buffer(filter->meshPool->index_buffer());
         commandBuffer->bind_vertex_buffer(filter->meshPool->vertex_buffer(), 0);
-        commandBuffer->bind_vertex_buffer(filter->instanceBuffer.lock(), 1);
+        commandBuffer->bind_vertex_buffer(filter->instanceBuffer, 1);
         for (auto& materialGroup : filter->materialGroups){
             auto& material = materialGroup.material;
-            commandBuffer->bind_shader(material->shader()->lock());
-            commandBuffer->bind_descriptor_sets(filter->descriptorSet.lock(), 0);
+            commandBuffer->bind_shader(*material->shader());
+            commandBuffer->bind_descriptor_sets(filter->descriptorSet, 0);
             if (auto descriptorSet = material->descriptor_set()){
                 commandBuffer->bind_descriptor_sets(descriptorSet, 1);
             }

@@ -90,16 +90,10 @@ JobResult RenderCameraJob::execute() {
 
     for (auto[camera] : m_cameraGroup){
 
-        auto commandBuffer = camera->commandBuffer.lock();
+        auto commandBuffer = camera->commandBuffer;
         commandBuffer->begin();
-        commandBuffer->begin_render_pass(camera->renderPass.lock(), camera->framebuffer.lock());
-
-        std::vector<std::shared_ptr<eagle::CommandBuffer>> secondaryCommandBuffers;
-        secondaryCommandBuffers.reserve(camera->secondaryCommandBuffers.size());
-        for (auto& cmdBuffer : camera->secondaryCommandBuffers){
-            secondaryCommandBuffers.emplace_back(cmdBuffer.lock());
-        }
-        commandBuffer->execute_commands(secondaryCommandBuffers);
+        commandBuffer->begin_render_pass(camera->renderPass, camera->framebuffer);
+        commandBuffer->execute_commands(camera->secondaryCommandBuffers);
         commandBuffer->end_render_pass();
         commandBuffer->end();
         camera->context->submit_command_buffer(commandBuffer);

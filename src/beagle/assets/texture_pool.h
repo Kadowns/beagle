@@ -15,7 +15,7 @@ class TextureHandle;
 
 class TexturePool {
 public:
-    typedef typename std::vector<std::weak_ptr<eagle::Texture>>::size_type index_type;
+    typedef typename std::vector<eagle::WeakPointer<eagle::Texture>>::size_type index_type;
 public:
     explicit TexturePool(eagle::RenderingContext* context);
 
@@ -24,17 +24,17 @@ public:
     TextureHandle insert(const eagle::TextureCreateInfo& textureCreateInfo);
     TextureHandle default_texture();
 
-    std::weak_ptr<eagle::Texture>& operator[](const index_type& index) { return m_textures[index]; }
+    eagle::WeakPointer<eagle::Texture>& operator[](const index_type& index) { return m_textures[index]; }
 
 private:
     eagle::RenderingContext* m_context = nullptr;
-    std::vector<std::weak_ptr<eagle::Texture>> m_textures;
+    std::vector<eagle::WeakPointer<eagle::Texture>> m_textures;
 
 };
 
-class TextureHandle : public Asset<std::weak_ptr<eagle::Texture>, TexturePool> {
+class TextureHandle : public Asset<eagle::WeakPointer<eagle::Texture>, TexturePool> {
 public:
-    TextureHandle(TexturePool* pool, TexturePool::index_type index) : Asset<std::weak_ptr<eagle::Texture>, TexturePool>(pool, index) {}
+    TextureHandle(TexturePool* pool, TexturePool::index_type index) : Asset<eagle::WeakPointer<eagle::Texture>, TexturePool>(pool, index) {}
 };
 
 }

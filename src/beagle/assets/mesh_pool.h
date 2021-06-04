@@ -46,13 +46,13 @@ public:
 
     Mesh& operator[](index_type index) { return m_meshes[index]; }
 
-    inline std::shared_ptr<eagle::VertexBuffer> vertex_buffer() const { return m_vertexBuffer.lock(); }
-    inline std::shared_ptr<eagle::IndexBuffer> index_buffer() const { return m_indexBuffer.lock(); }
+    inline eagle::WeakPointer<eagle::VertexBuffer> vertex_buffer() const { return m_vertexBuffer; }
+    inline eagle::WeakPointer<eagle::IndexBuffer> index_buffer() const { return m_indexBuffer; }
 
 private:
     std::vector<Mesh> m_meshes;
-    std::weak_ptr<eagle::VertexBuffer> m_vertexBuffer;
-    std::weak_ptr<eagle::IndexBuffer> m_indexBuffer;
+    eagle::WeakPointer<eagle::VertexBuffer> m_vertexBuffer;
+    eagle::WeakPointer<eagle::IndexBuffer> m_indexBuffer;
 };
 
 class MeshHandle : public Asset<Mesh, MeshPool> {

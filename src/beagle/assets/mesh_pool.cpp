@@ -18,8 +18,8 @@ MeshPool::MeshPool(eagle::RenderingContext* context) {
 MeshHandle MeshPool::insert(void* vertices, size_t vertexCount, size_t vertexSize, void* indices, size_t indexCount,
                             size_t indexSize) {
 
-    auto vb = m_vertexBuffer.lock();
-    auto ib = m_indexBuffer.lock();
+    auto vb = m_vertexBuffer;
+    auto ib = m_indexBuffer;
 
     uint32_t firstVertex = vb->size() / vertexSize;
     uint32_t firstIndex = ib->size() / indexSize;
@@ -33,6 +33,6 @@ MeshHandle MeshPool::insert(void* vertices, size_t vertexCount, size_t vertexSiz
 }
 
 void MeshPool::upload() {
-    m_vertexBuffer.lock()->upload();
-    m_indexBuffer.lock()->upload();
+    m_vertexBuffer->upload();
+    m_indexBuffer->upload();
 }

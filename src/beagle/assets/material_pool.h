@@ -17,7 +17,7 @@ class Material {
 public:
 
     ShaderHandle& shader() { return m_shader; }
-    std::shared_ptr<eagle::DescriptorSet> descriptor_set() { return m_descriptorSet.lock(); }
+    eagle::WeakPointer<eagle::DescriptorSet> descriptor_set() { return m_descriptorSet; }
 
     template<typename U>
     inline void update_uniform(size_t binding, const U& uniform) {
@@ -39,7 +39,7 @@ private:
 
 private:
     ShaderHandle m_shader;
-    std::weak_ptr<eagle::DescriptorSet> m_descriptorSet;
+    eagle::WeakPointer<eagle::DescriptorSet> m_descriptorSet;
     std::unordered_map<size_t, eagle::DescriptorBindingDescription> m_bindingDescriptions;
 };
 

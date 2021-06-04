@@ -21,9 +21,8 @@ JobResult SkyboxFilterUpdateVertexUboJob::execute() {
     for (auto entityId : m_dirtyCameras) {
         auto[filter, projection, transform] = m_manager->entity_from_id(entityId).components<SkyboxFilter, CameraProjection, Transform>();
         ubo.vp = projection->matrix * glm::mat4(glm::mat3(transform->inverseMatrix));
-        auto cameraUbo = filter->vertexShaderUbo.lock();
-        cameraUbo->copy_from(&ubo, sizeof(ubo), 0);
-        cameraUbo->upload();
+        filter->vertexShaderUbo->copy_from(&ubo, sizeof(ubo), 0);
+        filter->vertexShaderUbo->upload();
     }
     m_dirtyCameras.clear();
     return JobResult::SUCCESS;
@@ -45,11 +44,11 @@ SkyboxFilterRenderJob::SkyboxFilterRenderJob(EntityManager* manager) : BaseJob("
 JobResult SkyboxFilterRenderJob::execute() {
     for (auto[camera, filter] : m_filterGroup) {
 
-        auto commandBuffer = filter->commandBuffer.lock();
-        commandBuffer->begin(camera->renderPass.lock(), camera->framebuffer.lock());
-        commandBuffer->bind_vertex_buffer(filter->vertexBuffer.lock(), 0);
-        commandBuffer->bind_shader(filter->material->shader()->lock());
-        commandBuffer->bind_descriptor_sets(filter->descriptorSet.lock(), 0);
+        auto commandBuffer = filter->commandBuffer;
+        commandBuffer->begin(camera->renderPass, camera->framebuffer);
+        commandBuffer->bind_vertex_buffer(filter->vertexBuffer, 0);
+        commandBuffer->bind_shader(*filter->material->shader());
+        commandBuffer->bind_descriptor_sets(filter->descriptorSet, 0);
         commandBuffer->bind_descriptor_sets(filter->material->descriptor_set(), 1);
         commandBuffer->draw(36);
         commandBuffer->end();

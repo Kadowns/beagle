@@ -8,15 +8,15 @@ using namespace beagle;
 
 Material::Material(eagle::RenderingContext* context, const ShaderHandle& shader, const TextureHandle& defaultTexture) :
     m_shader(shader) {
-    auto s = m_shader->lock();
+    auto s = m_shader->get();
     if (s->get_descriptor_set_layouts().size() < 2){
         return;
     }
-    auto descriptorSetLayout = m_shader->lock()->get_descriptor_set_layout(1).lock();
-    std::vector<std::weak_ptr<eagle::DescriptorItem>> descriptors;
+    auto descriptorSetLayout = s->get_descriptor_set_layout(1);
+    std::vector<eagle::WeakPointer<eagle::DescriptorItem>> descriptors;
     descriptors.reserve(descriptorSetLayout->bindings().size());
     for (auto& binding : descriptorSetLayout->bindings()){
-        std::weak_ptr<eagle::DescriptorItem> descriptor;
+        eagle::WeakPointer<eagle::DescriptorItem> descriptor;
         switch(binding.descriptorType){
             case eagle::DescriptorType::UNIFORM_BUFFER:
                 descriptor = context->create_uniform_buffer(binding.size, nullptr);
@@ -37,38 +37,38 @@ Material::Material(eagle::RenderingContext* context, const ShaderHandle& shader,
 }
 
 void Material::update_uniform(size_t binding, void* data, size_t size, size_t offset) {
-    auto descriptorSet = m_descriptorSet.lock();
+    auto descriptorSet = m_descriptorSet;
     if (binding >= descriptorSet->size()){
         return;
     }
 
-    auto descriptor = descriptorSet->operator[](binding).lock();
+    auto descriptor = descriptorSet->operator[](binding);
     if (!descriptor || descriptor->type() != eagle::DescriptorType::UNIFORM_BUFFER){
         return;
     }
 
-    auto uniformBuffer = std::static_pointer_cast<eagle::UniformBuffer>(descriptor);
+    auto uniformBuffer = descriptor.cast<eagle::UniformBuffer>();
     assert(uniformBuffer);
     uniformBuffer->copy_from(data, size, offset);
     uniformBuffer->upload();
 }
 
 void Material::update_texture(size_t binding, const TextureHandle& texture) {
-    auto descriptorSet = m_descriptorSet.lock();
+    auto descriptorSet = m_descriptorSet;
     if (binding >= descriptorSet->size()){
         return;
     }
     descriptorSet->operator[](binding) = *texture;
-    m_descriptorSet.lock()->update();
+    m_descriptorSet->update();
 }
 
 void Material::update_uniform(size_t binding, const std::string& name, void* data, size_t size) {
-    auto descriptorSet = m_descriptorSet.lock();
+    auto descriptorSet = m_descriptorSet;
     if (binding >= descriptorSet->size()){
         return;
     }
 
-    auto descriptor = descriptorSet->operator[](binding).lock();
+    auto descriptor = descriptorSet->operator[](binding);
     if (!descriptor || descriptor->type() != eagle::DescriptorType::UNIFORM_BUFFER){
         return;
     }
@@ -82,7 +82,7 @@ void Material::update_uniform(size_t binding, const std::string& name, void* dat
 
     auto& member = it->second;
 
-    auto uniformBuffer = std::static_pointer_cast<eagle::UniformBuffer>(descriptor);
+    auto uniformBuffer = descriptor.cast<eagle::UniformBuffer>();
     assert(uniformBuffer);
     uniformBuffer->copy_from(data, size, member.offset);
     uniformBuffer->upload();

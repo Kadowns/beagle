@@ -15,13 +15,13 @@ class ShaderHandle;
 
 class ShaderPool {
 public:
-    typedef std::unordered_map<std::string, std::weak_ptr<eagle::Shader>> ShaderMap;
+    typedef std::unordered_map<std::string, eagle::WeakPointer<eagle::Shader>> ShaderMap;
     typedef typename ShaderMap::key_type index_type;
 public:
     explicit ShaderPool(eagle::RenderingContext* context);
     ShaderHandle insert(const eagle::ShaderCreateInfo& shaderCreateInfo, const index_type& name);
 
-    std::weak_ptr<eagle::Shader>& operator[](const index_type& index) { return m_shaders[index]; }
+    eagle::WeakPointer<eagle::Shader>& operator[](const index_type& index) { return m_shaders[index]; }
 
 private:
     eagle::RenderingContext* m_context = nullptr;
@@ -29,9 +29,9 @@ private:
 
 };
 
-class ShaderHandle : public Asset<std::weak_ptr<eagle::Shader>, ShaderPool> {
+class ShaderHandle : public Asset<eagle::WeakPointer<eagle::Shader>, ShaderPool> {
 public:
-    ShaderHandle(ShaderPool* pool, const ShaderPool::index_type& index) : Asset<std::weak_ptr<eagle::Shader>, ShaderPool>(pool, index) {}
+    ShaderHandle(ShaderPool* pool, const ShaderPool::index_type& index) : Asset<eagle::WeakPointer<eagle::Shader>, ShaderPool>(pool, index) {}
 };
 
 }

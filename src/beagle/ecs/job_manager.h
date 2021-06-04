@@ -12,6 +12,7 @@
 #include <functional>
 
 #include <eagle/timer.h>
+#include <eagle/memory/pointer.h>
 
 #include <beagle/utils/graph.h>
 
@@ -80,8 +81,8 @@ private:
         friend JobManager;
         friend Worker;
 
-        JobVertex(JobManager* manager, std::shared_ptr<BaseJob>&& job) :
-                m_manager(manager), m_job(std::forward<std::shared_ptr<BaseJob>>(job)) {}
+        JobVertex(JobManager* manager, eagle::StrongPointer<BaseJob>&& job) :
+                m_manager(manager), m_job(std::forward<eagle::StrongPointer<BaseJob>>(job)) {}
 
         bool is_enqueued() const { return m_enqueued; }
         bool is_executed() const { return m_executed; }
@@ -92,7 +93,7 @@ private:
 
     private:
         JobManager* m_manager = nullptr;
-        std::shared_ptr<BaseJob> m_job;
+        eagle::StrongPointer<BaseJob> m_job;
         size_t m_index = 0;
         bool m_enqueued = false;
         bool m_executed = false;
@@ -156,7 +157,7 @@ public:
 
     template<typename TJob, typename ...Args>
     JobHandle enqueue(Args&& ...args) {
-        size_t index = m_jobGraph.insert(JobVertex(this, std::make_shared<TJob>(std::forward<Args>(args)...)));
+        size_t index = m_jobGraph.insert(JobVertex(this, eagle::make_strong<TJob>(std::forward<Args>(args)...)));
         auto& handle = m_jobGraph.vertex(index);
         handle.m_index = index;
         return {index, this};
@@ -190,7 +191,7 @@ private:
     JobGraph m_jobGraph;
     std::mutex m_queueMutex;
     std::condition_variable m_awakeWorker;
-    std::vector<std::shared_ptr<Worker>> m_workers;
+    std::vector<eagle::StrongPointer<Worker>> m_workers;
     std::queue<size_t> m_availableJobs;
     std::vector<JobProfiling> m_executionTimes;
 };

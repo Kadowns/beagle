@@ -41,7 +41,7 @@ void JobManager::Worker::stop() {
 JobManager::JobManager() {
     m_workers.resize(std::thread::hardware_concurrency());
     for (auto& worker : m_workers){
-        worker = std::make_shared<Worker>(this);
+        worker = eagle::make_strong<Worker>(this);
     }
 }
 

@@ -6,8 +6,9 @@
 #define BEAGLE_SYSTEM_MANAGER_H
 
 #include <vector>
-#include <memory>
 #include <cassert>
+
+#include <eagle/memory/pointer.h>
 
 namespace beagle {
 
@@ -15,6 +16,7 @@ class Engine;
 class SystemManager;
 
 struct BaseSystem {
+    virtual ~BaseSystem() = default;
     virtual void configure(Engine* engine) = 0;
 };
 
@@ -36,7 +38,7 @@ private:
 
 private:
     Engine* m_engine;
-    std::vector<std::shared_ptr<BaseSystem>> m_systems;
+    std::vector<eagle::StrongPointer<BaseSystem>> m_systems;
     static size_t s_systemIndexCounter;
 };
 
@@ -52,7 +54,7 @@ S* SystemManager::attach(Args&& ... args) {
     if (index >= m_systems.size()){
         m_systems.resize(index);
     }
-    auto system = std::make_shared<S>(std::forward<Args>(args)...);
+    auto system = eagle::make_strong<S>(std::forward<Args>(args)...);
     system->configure(m_engine);
     m_systems.emplace_back(system);
     return system.get();

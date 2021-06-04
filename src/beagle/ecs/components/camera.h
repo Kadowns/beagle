@@ -22,10 +22,10 @@ struct Camera {
         commandBuffer = context->create_command_buffer(commandBufferCreateInfo);
     }
     eagle::RenderingContext* context;
-    std::weak_ptr<eagle::RenderPass> renderPass;
-    std::weak_ptr<eagle::Framebuffer> framebuffer;
-    std::weak_ptr<eagle::CommandBuffer> commandBuffer;
-    std::vector<std::weak_ptr<eagle::CommandBuffer>> secondaryCommandBuffers;
+    eagle::WeakPointer<eagle::RenderPass> renderPass;
+    eagle::WeakPointer<eagle::Framebuffer> framebuffer;
+    eagle::WeakPointer<eagle::CommandBuffer> commandBuffer;
+    std::vector<eagle::WeakPointer<eagle::CommandBuffer>> secondaryCommandBuffers;
 };
 
 struct CameraProjection {
