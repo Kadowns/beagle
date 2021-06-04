@@ -1,0 +1,42 @@
+#version 450
+
+layout (local_size_x = 8, local_size_y = 8) in;
+
+layout (binding = 0, rgba32f) uniform imageCube uCubeImage;
+
+layout (binding = 1) uniform sampler2D uHdrImage;
+
+
+const vec2 invAtan = vec2(0.1591, 0.3183);
+
+vec2 fromCubeToEquirectangular(vec3 v) {
+    vec2 uv = vec2(atan(v.z, v.x), asin(v.y));
+    uv *= invAtan;
+    uv += 0.5;
+    return uv;
+}
+
+void main() {
+    vec2 cubeImageSize = imageSize(uCubeImage);
+    ivec2 id = ivec2(gl_GlobalInvocationID.x, gl_GlobalInvocationID.y);
+
+    vec2 uv = vec2((id / cubeImageSize) * 2.0f - 1.0f);
+
+    vec3 faceDirection[6];
+
+    faceDirection[0] = vec3(-1.0, uv.y, uv.x);
+    faceDirection[1] = vec3(1.0, uv.y, -uv.x);
+
+    faceDirection[2] = vec3(-uv.x, -1.0, -uv.y);
+    faceDirection[3] = vec3(-uv.x, 1.0, uv.y);
+
+    faceDirection[4] = vec3(-uv.x, uv.y, -1.0);
+    faceDirection[5] = vec3(uv.x, uv.y, 1.0);
+
+    for (int face = 0; face < 6; face++){
+        vec2 finalUV = fromCubeToEquirectangular(normalize(faceDirection[face]));
+        vec4 result = texture(uHdrImage, finalUV);
+        ivec3 faceId = ivec3(id, face);
+        imageStore(uCubeImage, faceId, result);
+    }
+}
