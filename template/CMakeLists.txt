@@ -24,6 +24,8 @@ set(SHADERS
         assets/shaders/skybox/skybox.vert
         assets/shaders/compute/unwrap_skybox.comp
         assets/shaders/compute/cubemap_irradiance.comp
+        assets/shaders/compute/cubemap_prefilter.comp
+        assets/shaders/compute/integrate_brdf.comp
         )
 
 foreach (SHADER ${SHADERS})

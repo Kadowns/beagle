@@ -1,12 +1,12 @@
 #version 450
 
+#include "utils/utils.glsl"
+
 layout (local_size_x = 8, local_size_y = 8) in;
 
 layout (binding = 0, rgba32f) uniform imageCube uOutputCubemap;
 
 layout (binding = 1) uniform samplerCube uInputCubemap;
-
-const float PI = 3.14159265359;
 
 void main() {
 
@@ -28,7 +28,7 @@ void main() {
 
     for (int face = 0; face < 6; face++){
         // the sample direction equals the hemisphere's orientation
-        vec3 normal = normalize(faceDirection[face]);
+        vec3 normal = -normalize(faceDirection[face]);
 
         vec3 irradiance = vec3(0);
 
