@@ -59,12 +59,12 @@ TextureHandle TexturePool::insert(const std::string& filepath) {
         stbi_image_free(buffer);
 
         textureCreateInfo.imageCreateInfo.format = eagle::Format::R32G32B32A32_SFLOAT;
-        textureCreateInfo.imageCreateInfo.mipLevels = 1;
+        textureCreateInfo.imageCreateInfo.mipLevels = 1;//static_cast<uint32_t>(std::floor(std::log2(std::max(width, height)))) + 1;;
         textureCreateInfo.imageCreateInfo.arrayLayers = 1;
-        textureCreateInfo.imageCreateInfo.tiling = eagle::ImageTiling::LINEAR;
+        textureCreateInfo.imageCreateInfo.tiling = eagle::ImageTiling::OPTIMAL;
         textureCreateInfo.imageCreateInfo.memoryProperties = {eagle::MemoryProperty::DEVICE_LOCAL};
         textureCreateInfo.imageCreateInfo.aspects = {eagle::ImageAspect::COLOR};
-        textureCreateInfo.imageCreateInfo.usages = {eagle::ImageUsage::SAMPLED, eagle::ImageUsage::TRANSFER_DST};
+        textureCreateInfo.imageCreateInfo.usages = {eagle::ImageUsage::SAMPLED, eagle::ImageUsage::TRANSFER_SRC, eagle::ImageUsage::TRANSFER_DST};
         textureCreateInfo.imageCreateInfo.layout = eagle::ImageLayout::SHADER_READ_ONLY_OPTIMAL;
         textureCreateInfo.filter = eagle::Filter::LINEAR;
     }
@@ -83,16 +83,18 @@ TextureHandle TexturePool::insert(const std::string& filepath) {
         stbi_image_free(buffer);
 
         textureCreateInfo.imageCreateInfo.format = eagle::Format::R8G8B8A8_UNORM;
-        textureCreateInfo.imageCreateInfo.mipLevels = 1;
+        textureCreateInfo.imageCreateInfo.mipLevels = static_cast<uint32_t>(std::floor(std::log2(std::max(width, height)))) + 1;
         textureCreateInfo.imageCreateInfo.arrayLayers = 1;
-        textureCreateInfo.imageCreateInfo.tiling = eagle::ImageTiling::LINEAR;
+        textureCreateInfo.imageCreateInfo.tiling = eagle::ImageTiling::OPTIMAL;
         textureCreateInfo.imageCreateInfo.memoryProperties = {eagle::MemoryProperty::DEVICE_LOCAL};
         textureCreateInfo.imageCreateInfo.aspects = {eagle::ImageAspect::COLOR};
-        textureCreateInfo.imageCreateInfo.usages = {eagle::ImageUsage::SAMPLED, eagle::ImageUsage::TRANSFER_DST};
+        textureCreateInfo.imageCreateInfo.usages = {eagle::ImageUsage::SAMPLED, eagle::ImageUsage::TRANSFER_SRC, eagle::ImageUsage::TRANSFER_DST};
         textureCreateInfo.imageCreateInfo.layout = eagle::ImageLayout::SHADER_READ_ONLY_OPTIMAL;
         textureCreateInfo.filter = eagle::Filter::LINEAR;
     }
-    return insert(textureCreateInfo);
+    auto texture = insert(textureCreateInfo);
+    texture->get()->image()->generate_mipmaps();
+    return texture;
 }
 
 TextureHandle TexturePool::insert(const std::array<std::string, 6>& filepaths) {
