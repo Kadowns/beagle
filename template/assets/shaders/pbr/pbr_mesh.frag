@@ -33,11 +33,11 @@ layout(location = 0) out vec4 outColor;
 
 vec3 unpack_normal(in mat3 tbn, in vec2 texCoord, in sampler2D normalMap){
     // obtain normal from normal map in range [0,1]
-//    vec3 normal = texture(normalMap, texCoord).rgb;
-    vec3 normal = vec3(0.0, 0.0, 1.0);
+    vec3 normal = texture(normalMap, texCoord).rgb;
+//    vec3 normal = vec3(0.0, 0.0, 1.0);
 
     // transform normal vector to range [-1,1]
-//    normal = normal * 2.0 - 1.0;
+    normal = normal * 2.0 - 1.0;
 
     //transform from tanget space to world space
     normal = normalize(tbn * normal);

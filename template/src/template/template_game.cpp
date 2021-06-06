@@ -284,12 +284,12 @@ void TemplateGame::init(beagle::Engine* engine) {
     cubemapCreateInfo.imageCreateInfo.width = 512;
     cubemapCreateInfo.imageCreateInfo.height = 512;
     cubemapCreateInfo.imageCreateInfo.format = eagle::Format::R32G32B32A32_SFLOAT;
-    cubemapCreateInfo.imageCreateInfo.mipLevels = 1;
+    cubemapCreateInfo.imageCreateInfo.mipLevels = 6;
     cubemapCreateInfo.imageCreateInfo.arrayLayers = 6;
     cubemapCreateInfo.imageCreateInfo.tiling = eagle::ImageTiling::OPTIMAL;
     cubemapCreateInfo.imageCreateInfo.memoryProperties = {eagle::MemoryProperty::DEVICE_LOCAL};
     cubemapCreateInfo.imageCreateInfo.aspects = {eagle::ImageAspect::COLOR};
-    cubemapCreateInfo.imageCreateInfo.usages = {eagle::ImageUsage::SAMPLED, eagle::ImageUsage::TRANSFER_DST, eagle::ImageUsage::STORAGE};
+    cubemapCreateInfo.imageCreateInfo.usages = {eagle::ImageUsage::SAMPLED, eagle::ImageUsage::TRANSFER_DST, eagle::ImageUsage::TRANSFER_SRC, eagle::ImageUsage::STORAGE};
     cubemapCreateInfo.imageCreateInfo.layout = eagle::ImageLayout::GENERAL;
     cubemapCreateInfo.filter = eagle::Filter::LINEAR;
     cubemapCreateInfo.imageCreateInfo.type = eagle::ImageType::CUBE;
@@ -303,6 +303,7 @@ void TemplateGame::init(beagle::Engine* engine) {
     computeShader->dispatch(512 / 8, 512 / 8, 1);
 
     computeShader->join();
+    skyboxImage->get()->image()->generate_mipmaps();
 
     eagle::TextureCreateInfo irradianceMapCreateInfo = {};
     irradianceMapCreateInfo.imageCreateInfo.width = 32;
@@ -396,7 +397,7 @@ void TemplateGame::init(beagle::Engine* engine) {
 //        "images/skybox/back.jpg"
 //    });
     auto skyboxMaterial = engine->assets().material_pool().insert(skyboxShader);
-    skyboxMaterial->update_texture(0, skyboxImage);
+    skyboxMaterial->update_texture(0, prefilterMap);
 
 
     auto metalicMaterial = engine->assets().material_pool().insert(shader);
