@@ -16,6 +16,18 @@ vec2 hammersley(uint i, uint N) {
     return vec2(float(i)/float(N), radical_inverse_vdc(i));
 }
 
+float distribution_ggx(float NdotH, float roughness) {
+    float a      = roughness*roughness;
+    float a2     = a*a;
+    float NdotH2 = NdotH*NdotH;
+
+    float num   = a2;
+    float denom = (NdotH2 * (a2 - 1.0) + 1.0);
+    denom = PI * denom * denom;
+
+    return num / denom;
+}
+
 vec3 importance_sample_ggx(vec2 Xi, vec3 N, float roughness) {
     float a = roughness * roughness;
 
