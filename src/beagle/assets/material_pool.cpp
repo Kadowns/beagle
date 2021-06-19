@@ -24,10 +24,12 @@ Material::Material(eagle::RenderingContext* context, const ShaderHandle& shader,
             case eagle::DescriptorType::STORAGE_BUFFER:
                 descriptor = context->create_storage_buffer(binding.size, nullptr, eagle::UpdateType::DYNAMIC);
                 break;
-            case eagle::DescriptorType::SAMPLED_IMAGE:
             case eagle::DescriptorType::COMBINED_IMAGE_SAMPLER:
+                descriptor = (*defaultTexture);
+                break;
+            case eagle::DescriptorType::SAMPLED_IMAGE:
             case eagle::DescriptorType::STORAGE_IMAGE:
-                descriptor = *defaultTexture;
+                descriptor = (*defaultTexture)->image()->view();
                 break;
         }
         m_bindingDescriptions.emplace(binding.binding, binding);
