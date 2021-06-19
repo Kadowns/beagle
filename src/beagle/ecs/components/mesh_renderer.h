@@ -62,26 +62,49 @@ struct MeshFilter {
     };
 
 
-    explicit MeshFilter(eagle::RenderingContext* context, MeshPool* meshPool) : meshPool(meshPool) {
+    explicit MeshFilter(eagle::RenderingContext* context, MeshPool* meshPool, const TextureHandle& irradianceMap,
+                        const TextureHandle& prefilteredMap, const TextureHandle& brdfLut) : meshPool(meshPool) {
         commandBuffer = context->create_command_buffer({eagle::CommandBufferLevel::SECONDARY});
         instanceBuffer = context->create_vertex_buffer({eagle::UpdateType::DYNAMIC});
         vertexShaderUbo = context->create_uniform_buffer(sizeof(VertexUbo), nullptr);
         fragmentShaderUbo = context->create_uniform_buffer(sizeof(FragmentUbo), nullptr);
 
-        eagle::DescriptorBindingDescription vertBinding = {};
-        vertBinding.binding = 0;
-        vertBinding.descriptorType = eagle::DescriptorType::UNIFORM_BUFFER;
-        vertBinding.size = sizeof(VertexUbo);
-        vertBinding.shaderStage = eagle::ShaderStage::VERTEX;
+        std::vector<eagle::DescriptorBindingDescription> bindings;
+        bindings.resize(5);
+        bindings[0].binding = 0;
+        bindings[0].descriptorType = eagle::DescriptorType::UNIFORM_BUFFER;
+        bindings[0].size = sizeof(VertexUbo);
+        bindings[0].shaderStage = eagle::ShaderStage::VERTEX;
 
-        eagle::DescriptorBindingDescription fragBinding = {};
-        fragBinding.binding = 1;
-        fragBinding.descriptorType = eagle::DescriptorType::UNIFORM_BUFFER;
-        fragBinding.size = sizeof(FragmentUbo);
-        fragBinding.shaderStage = eagle::ShaderStage::FRAGMENT;
+        bindings[1].binding = 1;
+        bindings[1].descriptorType = eagle::DescriptorType::UNIFORM_BUFFER;
+        bindings[1].size = sizeof(FragmentUbo);
+        bindings[1].shaderStage = eagle::ShaderStage::FRAGMENT;
 
-        descriptorSetLayout = context->create_descriptor_set_layout({vertBinding, fragBinding});
-        descriptorSet = context->create_descriptor_set(descriptorSetLayout, {vertexShaderUbo, fragmentShaderUbo});
+        //irradiance map
+        bindings[2].binding = 2;
+        bindings[2].descriptorType = eagle::DescriptorType::COMBINED_IMAGE_SAMPLER;
+        bindings[2].shaderStage = eagle::ShaderStage::FRAGMENT;
+
+        //prefiltered map
+        bindings[3].binding = 3;
+        bindings[3].descriptorType = eagle::DescriptorType::COMBINED_IMAGE_SAMPLER;
+        bindings[3].shaderStage = eagle::ShaderStage::FRAGMENT;
+
+        //brdf lut
+        bindings[4].binding = 4;
+        bindings[4].descriptorType = eagle::DescriptorType::COMBINED_IMAGE_SAMPLER;
+        bindings[4].shaderStage = eagle::ShaderStage::FRAGMENT;
+
+
+        descriptorSetLayout = context->create_descriptor_set_layout(bindings);
+        descriptorSet = context->create_descriptor_set(descriptorSetLayout, {
+            vertexShaderUbo,
+            fragmentShaderUbo,
+            (*irradianceMap),
+            (*prefilteredMap),
+            (*brdfLut)
+        });
     }
 
     MeshPool* meshPool;
