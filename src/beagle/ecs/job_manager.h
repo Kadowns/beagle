@@ -27,6 +27,7 @@ enum class JobResult {
 class BaseJob {
 public:
     explicit BaseJob(const std::string& name) : m_name(name) {}
+    virtual ~BaseJob() = default;
 
     uint64_t timed_execute() {
         m_timer.start();
@@ -48,7 +49,7 @@ private:
 
 class Job : public BaseJob {
 public:
-    explicit Job(std::function<JobResult()>&& task, const std::string& name = "Lambda") : BaseJob(name), m_task(task) {}
+    explicit Job(std::function<JobResult()>&& task, const std::string& name = "Lambda") : BaseJob(name), m_task(std::move(task)) {}
     JobResult execute() override {
         return m_task();
     }
