@@ -3,11 +3,17 @@
 
 #include "pbr.glsl"
 
+//Global set
 layout(binding = 1, set = 0) uniform GlobalUniform {
     Illumination illumination;
     vec3 viewPosition;
 } uGlobal;
 
+layout (binding = 2, set = 0) uniform samplerCube uIrradianceMap;
+layout (binding = 3, set = 0) uniform samplerCube uPrefilteredMap;
+layout (binding = 4, set = 0) uniform sampler2D uBrdfLUT;
+
+//Material set
 layout(binding = 0, set = 1) uniform Material {
     vec4  albedo;
     float metallic;
@@ -20,9 +26,6 @@ layout (binding = 2, set = 1) uniform sampler2D uMetallicMap;
 layout (binding = 3, set = 1) uniform sampler2D uRoughnessMap;
 layout (binding = 4, set = 1) uniform sampler2D uAmbientOcclusionMap;
 layout (binding = 5, set = 1) uniform sampler2D uNormalMap;
-layout (binding = 6, set = 1) uniform samplerCube uIrradianceMap;
-layout (binding = 7, set = 1) uniform samplerCube uPrefilteredMap;
-layout (binding = 8, set = 1) uniform sampler2D uBrdfLUT;
 
 layout(location = 0) in vec2 vTexCoord;
 layout(location = 1) in vec3 vPosition;
@@ -58,7 +61,8 @@ void main() {
     vec3 viewDirection = normalize(uGlobal.viewPosition - vPosition);
     vec3 reflected = reflect(-viewDirection, pbr.normal);
 
-    pbr.prefilteredColor = texture(uPrefilteredMap, reflected).rgb;
+    const float MAX_REFLECTION_LOD = 4.0;
+    pbr.prefilteredColor = textureLod(uPrefilteredMap, reflected, pbr.roughness * MAX_REFLECTION_LOD).rgb;
     pbr.brdf = texture(uBrdfLUT, vec2(max(dot(pbr.normal, viewDirection), 0.0), pbr.roughness)).rg;
 
     vec3 color = calculate_illumination_pbr(uGlobal.illumination, vPosition, viewDirection, pbr);

@@ -8,6 +8,9 @@ layout (binding = 0, rgba32f) uniform imageCube uOutputCubemap;
 
 layout (binding = 1) uniform samplerCube uInputCubemap;
 
+layout(push_constant) uniform PushConstantBlock {
+    float roughness;
+} uPushConstantBlock;
 
 void main() {
 
@@ -34,7 +37,7 @@ void main() {
         vec3 V = R;
 
         const uint SAMPLE_COUNT = 1024u;
-        const float roughness = 0.1f;
+        const float roughness = uPushConstantBlock.roughness;
         float totalWeight = 0.0;
         vec3 prefilteredColor = vec3(0.0);
         for(uint i = 0u; i < SAMPLE_COUNT; i++) {

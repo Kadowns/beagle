@@ -3,10 +3,15 @@
 
 #include "light.glsl"
 
+//Global set
 layout(binding = 1, set = 0) uniform GlobalUniform {
     Illumination illumination;
     vec3 viewPosition;
 } uGlobal;
+
+layout (binding = 2, set = 0) uniform samplerCube uIrradianceMap;
+layout (binding = 3, set = 0) uniform samplerCube uPrefilteredMap;
+layout (binding = 4, set = 0) uniform sampler2D uBrdfLUT;
 
 layout(binding = 0, set = 1) uniform MaterialUniform {
     vec3 color;

@@ -296,7 +296,7 @@ void TemplateGame::init(beagle::Engine* engine) {
     auto skyboxImage = engine->assets().texture_pool().insert(cubemapCreateInfo);
 
     auto computeShader = context->create_compute_shader("shaders/compute/unwrap_skybox.comp.spv");
-    computeShader->update_image(0, skyboxImage->get()->image());
+    computeShader->update_image(0, skyboxImage->get()->image()->view());
     computeShader->update_image(1, *hdrImage);
     computeShader->update_descriptors();
 
@@ -321,7 +321,7 @@ void TemplateGame::init(beagle::Engine* engine) {
     auto irradianceMap = engine->assets().texture_pool().insert(irradianceMapCreateInfo);
 
     auto irradiannceComputeShader = context->create_compute_shader("shaders/compute/cubemap_irradiance.comp.spv");
-    irradiannceComputeShader->update_image(0, irradianceMap->get()->image());
+    irradiannceComputeShader->update_image(0, irradianceMap->get()->image()->view());
     irradiannceComputeShader->update_image(1, *skyboxImage);
     irradiannceComputeShader->update_descriptors();
 
@@ -333,7 +333,7 @@ void TemplateGame::init(beagle::Engine* engine) {
     prefilterMapCreateInfo.imageCreateInfo.width = 128;
     prefilterMapCreateInfo.imageCreateInfo.height = 128;
     prefilterMapCreateInfo.imageCreateInfo.format = eagle::Format::R32G32B32A32_SFLOAT;
-    prefilterMapCreateInfo.imageCreateInfo.mipLevels = 1;
+    prefilterMapCreateInfo.imageCreateInfo.mipLevels = 5;
     prefilterMapCreateInfo.imageCreateInfo.arrayLayers = 6;
     prefilterMapCreateInfo.imageCreateInfo.tiling = eagle::ImageTiling::OPTIMAL;
     prefilterMapCreateInfo.imageCreateInfo.memoryProperties = {eagle::MemoryProperty::DEVICE_LOCAL};
@@ -344,13 +344,19 @@ void TemplateGame::init(beagle::Engine* engine) {
     prefilterMapCreateInfo.imageCreateInfo.type = eagle::ImageType::CUBE;
     auto prefilterMap = engine->assets().texture_pool().insert(prefilterMapCreateInfo);
     auto prefilterComputeShader = context->create_compute_shader("shaders/compute/cubemap_prefilter.comp.spv");
-    prefilterComputeShader->update_image(0, prefilterMap->get()->image());
     prefilterComputeShader->update_image(1, *skyboxImage);
-    prefilterComputeShader->update_descriptors();
+    for (uint32_t mip = 0; mip < 5; mip++){
+        prefilterComputeShader->update_image(0, prefilterMap->get()->image()->view(mip));
+        prefilterComputeShader->update_descriptors();
+        float roughness = static_cast<float>(mip) / float(prefilterMapCreateInfo.imageCreateInfo.mipLevels - 1);
+        prefilterComputeShader->update_push_constants(&roughness, sizeof(float));
 
-    prefilterComputeShader->dispatch(128 / 8, 128 / 8, 1);
+        uint32_t imageSize = std::max(prefilterMapCreateInfo.imageCreateInfo.width / (mip + 1), 1u);
 
-    prefilterComputeShader->join();
+        prefilterComputeShader->dispatch(imageSize / 8, imageSize / 8, 1);
+        prefilterComputeShader->join();
+    }
+
 
     eagle::TextureCreateInfo brdfMapCreateInfo = {};
     brdfMapCreateInfo.imageCreateInfo.width = 512;
@@ -366,7 +372,7 @@ void TemplateGame::init(beagle::Engine* engine) {
     brdfMapCreateInfo.filter = eagle::Filter::LINEAR;
     auto brdfMap = engine->assets().texture_pool().insert(brdfMapCreateInfo);
     auto integrateBrdfComputeShader = context->create_compute_shader("shaders/compute/integrate_brdf.comp.spv");
-    integrateBrdfComputeShader->update_image(0, brdfMap->get()->image());
+    integrateBrdfComputeShader->update_image(0, brdfMap->get()->image()->view());
     integrateBrdfComputeShader->update_descriptors();
 
     integrateBrdfComputeShader->dispatch(512 / 8, 512 / 8, 1);
@@ -397,7 +403,7 @@ void TemplateGame::init(beagle::Engine* engine) {
 //        "images/skybox/back.jpg"
 //    });
     auto skyboxMaterial = engine->assets().material_pool().insert(skyboxShader);
-    skyboxMaterial->update_texture(0, prefilterMap);
+    skyboxMaterial->update_texture(0, skyboxImage);
 
 
     auto metalicMaterial = engine->assets().material_pool().insert(shader);
@@ -409,15 +415,10 @@ void TemplateGame::init(beagle::Engine* engine) {
 
     lightMaterial->update_uniform(0, glm::vec3(1.0f));
 
-
     metalicMaterial->update_uniform(0, MaterialData{glm::vec4(0.7f, 0.3f, 0.3f, 1.0f), 1.0f, 0.7f, 0.2f});
 
     woodMaterial->update_uniform(0, MaterialData{glm::vec4(0.2f, 0.7f, 0.5f, 1.0f), 0.1f, 0.6f, 8.0f});
     woodMaterial->update_texture(1, woodTexture);
-    woodMaterial->update_texture(6, irradianceMap);
-    woodMaterial->update_texture(7, prefilterMap);
-    woodMaterial->update_texture(8, brdfMap);
-
 
 
 
@@ -427,15 +428,12 @@ void TemplateGame::init(beagle::Engine* engine) {
     for (int i = 0; i < entityCount; i++){
 
         auto material = engine->assets().material_pool().insert(shader);
-        material->update_uniform(0, MaterialData{glm::vec4(1.0f, 0.3f, 0.3f, 1.0f), float(i % 10) / 9.0f, float(i / 10) / 9.0f, 1.0f});
-//        material->update_texture(1, metalMeshAlbedo);
-//        material->update_texture(2, metalMeshMetallic);
-//        material->update_texture(3, metalMeshRoughness);
-//        material->update_texture(4, metalMeshAO);
+        material->update_uniform(0, MaterialData{glm::vec4(1.0f), float(i % 10) / 9.0f, float(i / 10) / 9.0f, 1.0f});
+        material->update_texture(1, metalMeshAlbedo);
+        material->update_texture(2, metalMeshMetallic);
+        material->update_texture(3, metalMeshRoughness);
+        material->update_texture(4, metalMeshAO);
         material->update_texture(5, metalMeshNormal);
-        material->update_texture(6, irradianceMap);
-        material->update_texture(7, prefilterMap);
-        material->update_texture(8, brdfMap);
 
         auto e = engine->entities().create();
         e.assign<beagle::Position>((i % 10) * 3, (i / 10) * 3, 0);
@@ -448,16 +446,16 @@ void TemplateGame::init(beagle::Engine* engine) {
         e.assign<beagle::MeshRenderer>(sphereMesh, material);
     }
 
-//    for (int i  = 0; i < 8; i++){
-//        auto e = engine->entities().create();
-//        auto position = e.assign<beagle::Position>((i % 4) * 5 + 10, (i / 4) * 5 + 10, -20);
-//        e.assign<beagle::PointLight>(glm::vec3(1.0f), 32.0f);
-//        e.assign<beagle::Scale>(0.5f);
-//        e.assign<beagle::Transform>();
-//        auto oscilator = e.assign<Oscilator>(position->vec);
-//        oscilator->frequency = eagle::Random::value() * 0.2f;
-//        e.assign<beagle::MeshRenderer>(sphereMesh, lightMaterial);
-//    }
+    for (int i  = 0; i < 8; i++){
+        auto e = engine->entities().create();
+        auto position = e.assign<beagle::Position>((i % 4) * 5 + 10, (i / 4) * 5 + 10, -20);
+        e.assign<beagle::PointLight>(glm::vec3(1.0f), 32.0f);
+        e.assign<beagle::Scale>(0.5f);
+        e.assign<beagle::Transform>();
+        auto oscilator = e.assign<Oscilator>(position->vec);
+        oscilator->frequency = eagle::Random::value() * 0.2f;
+        e.assign<beagle::MeshRenderer>(sphereMesh, lightMaterial);
+    }
 
     auto e = engine->entities().create();
     e.assign<beagle::MeshRenderer>(planeMesh, woodMaterial);
@@ -477,7 +475,7 @@ void TemplateGame::init(beagle::Engine* engine) {
     e.assign<beagle::CameraProjection>();
     e.assign<beagle::Transform>();
     auto camera = e.assign<beagle::Camera>(context);
-    auto meshFilter = e.assign<beagle::MeshFilter>(context, &engine->assets().mesh_pool());
+    auto meshFilter = e.assign<beagle::MeshFilter>(context, &engine->assets().mesh_pool(), irradianceMap, prefilterMap, brdfMap);
     auto skyboxFilter = e.assign<beagle::SkyboxFilter>(context, skyboxMaterial);
     camera->secondaryCommandBuffers.emplace_back(meshFilter->commandBuffer);
     camera->secondaryCommandBuffers.emplace_back(skyboxFilter->commandBuffer);
