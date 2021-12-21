@@ -45,7 +45,7 @@ JobResult SkyboxFilterRenderJob::execute() {
     for (auto[camera, filter] : m_filterGroup) {
 
         auto commandBuffer = filter->commandBuffer;
-        commandBuffer->begin(camera->renderPass, camera->framebuffer);
+        commandBuffer->begin(camera->passes[0].renderPass, camera->passes[0].framebuffer);
         commandBuffer->bind_vertex_buffer(filter->vertexBuffer, 0);
         commandBuffer->bind_shader(*filter->material->shader());
         commandBuffer->bind_descriptor_sets(filter->descriptorSet, 0);

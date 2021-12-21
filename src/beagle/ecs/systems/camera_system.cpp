@@ -92,9 +92,11 @@ JobResult RenderCameraJob::execute() {
 
         auto commandBuffer = camera->commandBuffer;
         commandBuffer->begin();
-        commandBuffer->begin_render_pass(camera->renderPass, camera->framebuffer);
-        commandBuffer->execute_commands(camera->secondaryCommandBuffers);
-        commandBuffer->end_render_pass();
+        for (auto& pass : camera->passes){
+            commandBuffer->begin_render_pass(pass.renderPass, pass.framebuffer);
+            commandBuffer->execute_commands(pass.commandBuffers);
+            commandBuffer->end_render_pass();
+        }
         commandBuffer->end();
         camera->context->submit_command_buffer(commandBuffer);
     }

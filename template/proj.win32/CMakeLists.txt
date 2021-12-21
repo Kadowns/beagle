@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.17)
 project(template_app)
 
+set(CMAKE_CXX_STANDARD 17)
+
 set(APP_NAME template_app)
 set(APP_NAME_LIB ${APP_NAME}_lib)
 set(APP_NAME_EXE ${APP_NAME})

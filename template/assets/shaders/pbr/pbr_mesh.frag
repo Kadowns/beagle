@@ -66,7 +66,7 @@ void main() {
     pbr.brdf = texture(uBrdfLUT, vec2(max(dot(pbr.normal, viewDirection), 0.0), pbr.roughness)).rg;
 
     vec3 color = calculate_illumination_pbr(uGlobal.illumination, vPosition, viewDirection, pbr);
-    color = color / (color + vec3(1.0));
-    color = pow(color, vec3(1.0/2.2));
+//    color = color / (color + vec3(1.0));
+//    color = pow(color, vec3(1.0/2.2));
     outColor = vec4(color, 1.0f);
 }

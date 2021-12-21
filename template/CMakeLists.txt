@@ -18,6 +18,8 @@ target_link_libraries(${APP_NAME_LIB} PUBLIC beagle)
 set(SHADERS
         assets/shaders/mesh.frag
         assets/shaders/mesh.vert
+        assets/shaders/fullscreen.vert
+        assets/shaders/fullscreen.frag
         assets/shaders/phong/phong_mesh.frag
         assets/shaders/pbr/pbr_mesh.frag
         assets/shaders/skybox/skybox.frag

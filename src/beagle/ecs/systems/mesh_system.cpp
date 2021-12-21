@@ -212,7 +212,7 @@ JobResult MeshFilterRenderJob::execute() {
     for (auto[camera, filter] : m_meshFilterGroup){
         auto commandBuffer = filter->commandBuffer;
 
-        commandBuffer->begin(camera->renderPass, camera->framebuffer);
+        commandBuffer->begin(camera->passes[0].renderPass, camera->passes[0].framebuffer);
 
         commandBuffer->bind_index_buffer(filter->meshPool->index_buffer());
         commandBuffer->bind_vertex_buffer(filter->meshPool->vertex_buffer(), 0);

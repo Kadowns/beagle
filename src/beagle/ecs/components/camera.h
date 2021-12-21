@@ -12,20 +12,28 @@
 #include <eagle/renderer/framebuffer.h>
 #include <eagle/renderer/rendering_context.h>
 
+#include <utility>
+
 namespace beagle {
 
 struct Camera {
+
+    struct Pass {
+        eagle::WeakPointer<eagle::RenderPass> renderPass;
+        eagle::WeakPointer<eagle::Framebuffer> framebuffer;
+        std::vector<eagle::WeakPointer<eagle::CommandBuffer>> commandBuffers;
+    };
+
     explicit Camera(eagle::RenderingContext* context) :
-    context(context), renderPass(context->main_render_pass()), framebuffer(context->main_frambuffer()) {
+    context(context) {
         eagle::CommandBufferCreateInfo commandBufferCreateInfo = {};
         commandBufferCreateInfo.level = eagle::CommandBufferLevel::PRIMARY;
         commandBuffer = context->create_command_buffer(commandBufferCreateInfo);
     }
+
     eagle::RenderingContext* context;
-    eagle::WeakPointer<eagle::RenderPass> renderPass;
-    eagle::WeakPointer<eagle::Framebuffer> framebuffer;
     eagle::WeakPointer<eagle::CommandBuffer> commandBuffer;
-    std::vector<eagle::WeakPointer<eagle::CommandBuffer>> secondaryCommandBuffers;
+    std::vector<Pass> passes;
 };
 
 struct CameraProjection {
