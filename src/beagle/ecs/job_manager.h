@@ -19,10 +19,7 @@
 namespace beagle {
 
 
-enum class JobResult {
-    SUCCESS = 0,
-    INTERRUPT = 1
-};
+
 
 class BaseJob {
 public:
