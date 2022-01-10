@@ -12,105 +12,143 @@
 #include <thread>
 #include <mutex>
 #include <condition_variable>
+#include <future>
+#include <memory>
 
-class ThreadPool {
-public:
-    typedef std::function<void(size_t executionIndex)> Function;
+namespace beagle {
 
-private:
-
-    struct Work {
-        Function func;
-        size_t executionIndex;
-    };
-
-public:
-
-    void execute(Function&& f, size_t executionCount = 1){
-        std::lock_guard<std::mutex> lock(m_workQueueMutex);
-        for (int i = 0; i < executionCount; i++){
-            m_work
-        }
-        wait_idle(executionCount);
-        for (int i = 0; i < executionCount; i++){
-            m_awakeCondition.notify_one();
-        }
-    }
-
-    size_t size() const{
-        return m_threads.size();
-    }
-
-    void resize(size_t newSize){
-        int count = static_cast<int>(newSize) - static_cast<int>(size());
-        if (count < 0){
-            m_threads.erase(m_threads.end() - count, m_threads.end());
-            return;
-        }
-
-        for (int i = 0; i < count; i++){
-            m_threads.emplace_back(*this, m_idCounter++);
-        }
-    }
-
-private:
-
-    class Thread {
+    class ThreadPool {
     public:
 
-        Thread(ThreadPool& owner, size_t id) : m_owner(owner), m_id(id) {
-            m_thread = std::thread([this]{
+        class Work {
+        public:
+
+            explicit Work(std::function<void()> work) :
+                    m_work(std::move(work)) {}
+
+            bool is_complete() const {
+                return m_complete;
+            }
+
+            void wait() {
+                std::unique_lock<std::mutex> lock(m_workMutex);
+                m_workFinished.wait(lock, [this]() {
+                    return is_complete();
+                });
+            }
+
+            void operator()() {
+                m_work();
+                m_complete = true;
+                m_workFinished.notify_all();
+            }
+
+        private:
+            std::function<void()> m_work;
+            std::mutex m_workMutex;
+            std::condition_variable m_workFinished;
+            bool m_complete = false;
+        };
+
+        class WorkResult {
+        public:
+
+            WorkResult(){}
+
+            WorkResult(std::shared_ptr<Work> work){
+                push(std::move(work));
+            }
+
+            void push(std::shared_ptr<Work> work){
+                m_workDependencies.emplace_back(std::move(work));
+            }
+
+            void clear(){
+                m_workDependencies.clear();
+            }
+
+            void wait(){
+                for (auto& work : m_workDependencies){
+                    work->wait();
+                }
+            }
+
+        private:
+            std::vector<std::shared_ptr<Work>> m_workDependencies;
+        };
+
+    public:
+
+        explicit ThreadPool(size_t size){
+            m_threads.resize(size, std::thread([this]{
                 while (!m_stop) {
-                    auto [work, executionIndex] = m_owner.wait_for_work(m_id);
-                    if (work) {
-                        work(executionIndex);
+                    auto work = wait_for_work();
+                    if (work){
+                        work->operator()();
                     }
                 }
-            });
+            }));
         }
 
-        ~Thread(){
+        ~ThreadPool(){
             m_stop = true;
-            m_thread.join();
+            m_awakeCondition.notify_all();
+        }
+
+        template<typename F>
+        WorkResult execute(F&& f) {
+            std::lock_guard<std::mutex> lock(m_workQueueMutex);
+            m_workQueue.push(std::make_shared<Work>(f));
+            WorkResult result(m_workQueue.back());
+            m_awakeCondition.notify_one();
+            return result;
+        }
+
+        template<typename F>
+        WorkResult execute_for(size_t count, F&& f) {
+            std::lock_guard<std::mutex> lock(m_workQueueMutex);
+            WorkResult result;
+            for (int i = 0; i < count; i++){
+                m_workQueue.push(std::make_shared<Work>([i, f]{
+                    f(i);
+                }));
+                result.push(m_workQueue.back());
+                m_awakeCondition.notify_one();
+            }
+
+            return result;
+        }
+
+        size_t size() const {
+            return m_threads.size();
         }
 
     private:
-        ThreadPool& m_owner;
-        size_t m_id;
-        std::thread m_thread;
+
+        std::shared_ptr<Work> wait_for_work() {
+            std::unique_lock<std::mutex> lock(m_workQueueMutex);
+
+            m_awakeCondition.wait(lock, [this]{
+                return !m_workQueue.empty() || m_stop;
+            });
+
+            if (m_stop){
+                return nullptr;
+            }
+
+            auto work = m_workQueue.front();
+            m_workQueue.pop();
+            return work;
+        }
+
+    private:
+        std::vector<std::thread> m_threads;
+        std::queue<std::shared_ptr<Work>> m_workQueue;
+        std::mutex m_workQueueMutex;
+        std::condition_variable m_awakeCondition;
         bool m_stop = false;
     };
-private:
 
-    std::tuple<Function, size_t> wait_for_work(size_t threadId){
-        std::unique_lock<std::mutex> lock(m_mutex);
-        m_idleThreads.insert(threadId);
-        m_idleCondition.notify_all();
-        m_awakeCondition.wait(lock);
-        m_idleThreads.erase(threadId);
-        return {m_pendingWork, 0};
-    }
-
-    void wait_idle(size_t idleCount){
-        std::unique_lock<std::mutex> lock(m_mutex);
-        m_idleCondition.wait(lock, [this, idleCount]{
-            return m_idleThreads.size() >= idleCount;
-        });
-    }
-
-
-private:
-    friend Thread;
-    std::vector<Thread> m_threads;
-    std::set<size_t> m_idleThreads;
-    std::queue<Work> m_workQueue;
-    std::mutex m_mutex;
-    std::mutex m_workQueueMutex;
-    std::condition_variable m_awakeCondition;
-    std::condition_variable m_idleCondition;
-    Function m_pendingWork;
-    size_t m_idCounter;
-};
-
+}
 
 #endif //BEAGLE_THREAD_POOL_H
