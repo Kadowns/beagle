@@ -147,8 +147,11 @@ public:
 
         explicit EdgesFromView(const Node& owner) : m_owner(owner) {}
 
+        size_t size() const { return m_owner.connectionsTo.size(); }
+
         ConstIterator begin() const { return m_owner.connectionsTo.begin(); }
         ConstIterator end() const { return m_owner.connectionsTo.end(); }
+
     private:
         const Node& m_owner;
     };
