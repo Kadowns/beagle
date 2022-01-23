@@ -26,77 +26,108 @@ private:
     public:
         explicit JobVertex(std::function<JobResult()> job) : m_job(std::move(job)) {}
 
+        JobResult execute() {
+            return m_job();
+        }
+
     private:
         std::function<JobResult()> m_job;
     };
 
 public:
 
+    //For now, there is only one type of one way relation
     enum JobRelation {
-        BEFORE,
-        AFTER
+        PRECEDE,
     };
 
-    typedef typename Graph<JobVertex, JobRelation>::GraphIterator Iterator;
-    typedef typename Graph<JobVertex, JobRelation>::EdgesFromView EdgesView;
+    typedef typename Graph<JobVertex, JobRelation>::GraphIterator GraphIterator;
+    typedef typename Graph<JobVertex, JobRelation>::EdgesFromView EdgesFromView;
+    typedef typename Graph<JobVertex, JobRelation>::EdgesToView EdgesToView;
 
-    template<JobRelation R>
-    class JobRelationIterator : public std::iterator<std::input_iterator_tag, size_t> {
+    class JobIterator : public std::iterator<std::input_iterator_tag, size_t> {
     public:
 
-        JobRelationIterator& operator++(){
-            m_it++;
-            next();
-            return *this;
-        }
+        bool operator==(const JobIterator& rhs) const { return m_it == rhs.m_it; }
+
+        bool operator!=(const JobIterator& rhs) const { return m_it != rhs.m_it; }
+
+        JobIterator& operator++();
 
         Job operator*();
 
     private:
-        JobRelationIterator(JobGraph& owner, EdgesView& view, EdgesView::ConstIterator it) :
+        JobIterator(JobGraph& owner, GraphIterator it) :
+                m_owner(owner),
+                m_it(it){
+
+        }
+
+        void next();
+
+    private:
+        friend class JobGraph;
+
+        JobGraph& m_owner;
+        GraphIterator m_it;
+    };
+
+    template<typename ViewType>
+    class JobConnectionIterator : public std::iterator<std::input_iterator_tag, size_t> {
+    public:
+
+        bool operator==(const JobConnectionIterator<ViewType>& rhs) const { return m_it == rhs.m_it; }
+
+        bool operator!=(const JobConnectionIterator<ViewType>& rhs) const { return m_it != rhs.m_it; }
+
+        JobConnectionIterator<ViewType>& operator++();
+
+        Job operator*();
+
+    private:
+        typedef typename ViewType::Iterator ViewIterator;
+
+        JobConnectionIterator(const JobGraph& owner, const ViewType& view, ViewIterator it) :
             m_owner(owner),
             m_view(view),
             m_it(it){
 
         }
 
-        void next(){
-            while(m_it != m_view.end() && m_it->second != R){
-                m_it++;
-            }
-        }
+        void next();
 
     private:
-        template<JobRelation R>
-        friend class JobRelationView;
+        friend class JobConnectionView;
 
-        JobGraph& m_owner;
-        EdgesView& m_view;
-        EdgesView::ConstIterator m_it;
+        const JobGraph& m_owner;
+        const ViewType& m_view;
+        ViewIterator m_it;
     };
 
-    template<JobRelation R>
-    class JobRelationView {
+    template<typename ViewType>
+    class JobConnectionView {
     public:
 
-        JobRelationIterator<R> begin() { return JobRelationIterator<R>(m_owner, m_view, m_view.begin()); }
-        JobRelationIterator<R> end() { return JobRelationIterator<R>(m_owner, m_view, m_view.end()); }
+        size_t size() const { return m_view.size(); }
 
-        JobRelationIterator<R> begin() const { return JobRelationIterator<R>(m_owner, m_view, m_view.begin()); }
-        JobRelationIterator<R> end() const { return JobRelationIterator<R>(m_owner, m_view, m_view.end()); }
+        JobConnectionIterator<ViewType> begin() { return JobConnectionIterator<ViewType>(m_owner, m_view, m_view.begin()); }
+        JobConnectionIterator<ViewType> end() { return JobConnectionIterator<ViewType>(m_owner, m_view, m_view.end()); }
+
+        JobConnectionIterator<ViewType> begin() const { return JobConnectionIterator<ViewType>(m_owner, m_view, m_view.begin()); }
+        JobConnectionIterator<ViewType> end() const { return JobConnectionIterator<ViewType>(m_owner, m_view, m_view.end()); }
 
     private:
         friend JobGraph;
 
-        JobRelationView(JobGraph& owner, const EdgesView& view) : m_owner(owner), m_view(view) {}
+        JobConnectionView(const JobGraph& owner, const ViewType& view) : m_owner(owner), m_view(view) {}
 
     private:
-        JobGraph& m_owner;
-        EdgesView m_view;
+        const JobGraph& m_owner;
+        ViewType m_view;
     };
 
-    typedef JobRelationView<JobRelation::AFTER> JobPredecessors;
-    typedef JobRelationView<JobRelation::BEFORE> JobSuccessors;
+    typedef JobConnectionView<EdgesToView> JobPredecessors;
+    typedef JobConnectionView<EdgesFromView> JobSuccessors;
 
     template<typename F>
     Job emplace(F&& callable);
@@ -108,20 +139,29 @@ public:
 
     inline void succeed(Job a, Job b);
 
-    Iterator begin() { return m_graph.begin(); }
-    Iterator end() { return m_graph.end(); }
-
-    Iterator begin() const { return m_graph.begin(); }
-    Iterator end() const { return m_graph.end(); }
+    JobIterator begin() { return JobIterator(*this, m_graph.begin()); }
+    JobIterator end() { return JobIterator(*this, m_graph.end()); }
 
     JobPredecessors predecessors(const Job& job);
 
     JobSuccessors successors(const Job& job);
 
+    JobPredecessors predecessors(const Job& job) const;
+
+    JobSuccessors successors(const Job& job) const;
+
+    Job at(size_t index);
+
+    size_t size() const;
+
+    JobResult execute(const Job& job);
+
 private:
 
     Graph<JobVertex, JobRelation> m_graph;
 };
+
+
 
 typedef JobGraph::JobRelation JobRelation;
 typedef JobGraph::JobPredecessors JobPredecessors;
@@ -139,15 +179,36 @@ public:
 
     JobSuccessors successors();
 
+    JobPredecessors predecessors() const;
+
+    JobSuccessors successors() const;
+
+    JobResult execute();
+
+    size_t id() const { return m_index; }
+
 private:
     friend class JobGraph;
     JobGraph& m_owner;
     size_t m_index;
 };
 
-template<JobGraph::JobRelation R>
-Job JobGraph::JobRelationIterator<R>::operator*() {
+template<typename ViewType>
+Job JobGraph::JobConnectionIterator<ViewType>::operator*() {
     return Job(m_owner, m_it->first);
+}
+
+template<typename ViewType>
+void JobGraph::JobConnectionIterator<ViewType>::next() {
+    if(m_it != m_view.end()){
+        m_it++;
+    }
+}
+
+template<typename ViewType>
+JobGraph::JobConnectionIterator<ViewType>& JobGraph::JobConnectionIterator<ViewType>::operator++() {
+    next();
+    return *this;
 }
 
 template<typename F>

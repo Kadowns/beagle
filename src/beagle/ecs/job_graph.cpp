@@ -14,17 +14,43 @@ void Job::succeed(Job other) {
     m_owner.succeed(*this, other);
 }
 
-JobGraph::JobRelationView<JobGraph::JobRelation::AFTER> Job::predecessors() {
+JobPredecessors Job::predecessors() {
     return m_owner.predecessors(*this);
 }
 
-JobGraph::JobRelationView<JobGraph::JobRelation::BEFORE> Job::successors() {
+JobSuccessors Job::successors() {
     return m_owner.successors(*this);
 }
 
+JobPredecessors Job::predecessors() const {
+    return m_owner.predecessors(*this);
+}
+
+JobSuccessors Job::successors() const {
+    return m_owner.successors(*this);
+}
+
+JobResult Job::execute(){
+    return m_owner.execute(*this);
+}
+
+Job JobGraph::JobIterator::operator*() {
+    return Job(m_owner, m_it.index());
+}
+
+void JobGraph::JobIterator::next() {
+    if (m_it != m_owner.m_graph.end()){
+        ++m_it;
+    }
+}
+
+JobGraph::JobIterator &JobGraph::JobIterator::operator++() {
+    next();
+    return *this;
+}
+
 void JobGraph::precede(Job a, Job b) {
-    m_graph.connect(a.m_index, b.m_index, JobRelation::BEFORE);
-    m_graph.connect(b.m_index, a.m_index, JobRelation::AFTER);
+    m_graph.connect(a.m_index, b.m_index, JobRelation::PRECEDE);
 }
 
 void JobGraph::succeed(Job a, Job b) {
@@ -32,9 +58,29 @@ void JobGraph::succeed(Job a, Job b) {
 }
 
 JobPredecessors JobGraph::predecessors(const Job &job) {
-    return JobPredecessors(*this, m_graph.edges_from(job.m_index));
+    return JobPredecessors(*this, m_graph.edges_to(job.m_index));
 }
 
 JobSuccessors JobGraph::successors(const Job &job) {
     return JobSuccessors(*this, m_graph.edges_from(job.m_index));
+}
+
+Job JobGraph::at(size_t index) {
+    return Job(*this, index);
+}
+
+JobPredecessors JobGraph::predecessors(const Job &job) const {
+    return JobPredecessors(*this, m_graph.edges_to(job.m_index));
+}
+
+JobSuccessors JobGraph::successors(const Job &job) const {
+    return JobSuccessors(*this, m_graph.edges_from(job.m_index));
+}
+
+size_t JobGraph::size() const {
+    return m_graph.size();
+}
+
+JobResult JobGraph::execute(const Job& job) {
+    return m_graph.vertex(job.m_index).execute();
 }
