@@ -21,9 +21,10 @@ private:
 
         typedef std::unordered_map<size_t, E> ConnectionMap;
 
-        Node(V&& v) : data(std::move(v)) {}
-        Node(const V& v) : data(v) {}
+        Node(V&& v, size_t index) : data(std::move(v)), index(index) {}
+        Node(const V& v, size_t index) : data(v), index(index) {}
         V data;
+        size_t index;
         ConnectionMap connectionsTo;
         std::set<size_t> connectionsFrom;
     };
@@ -32,8 +33,9 @@ public:
 
     size_t insert(V&& v){
         if (m_freeIndices.empty()){
-            m_nodes.emplace_back(std::move(v));
-            return m_nodes.size() - 1;
+            size_t index = m_nodes.size() - 1;
+            m_nodes.emplace_back(std::move(v), index);
+            return index;
         }
         size_t index = m_freeIndices.back();
         m_freeIndices.pop_back();
@@ -43,8 +45,9 @@ public:
 
     size_t insert(const V& v){
         if (m_freeIndices.empty()){
-            m_nodes.emplace_back(v);
-            return m_nodes.size() - 1;
+            size_t index = m_nodes.size() - 1;
+            m_nodes.emplace_back(v, index);
+            return index;
         }
         size_t index = m_freeIndices.back();
         m_freeIndices.pop_back();
@@ -109,6 +112,10 @@ public:
             return *this;
         }
 
+        size_t index() const {
+            return m_i;
+        }
+
     protected:
         friend Graph<V, E>;
         GraphIterator(Graph<V, E>* owner, size_t i) : m_owner(owner), m_i(i), m_freeCursor(0) {}
@@ -143,21 +150,76 @@ public:
 
     class EdgesFromView {
     public:
-        typedef typename Node::ConnectionMap::const_iterator ConstIterator;
+        typedef typename Node::ConnectionMap::const_iterator Iterator;
 
         explicit EdgesFromView(const Node& owner) : m_owner(owner) {}
 
         size_t size() const { return m_owner.connectionsTo.size(); }
 
-        ConstIterator begin() const { return m_owner.connectionsTo.begin(); }
-        ConstIterator end() const { return m_owner.connectionsTo.end(); }
+        Iterator begin() const { return m_owner.connectionsTo.begin(); }
+        Iterator end() const { return m_owner.connectionsTo.end(); }
 
     private:
         const Node& m_owner;
     };
 
+    class EdgesToView {
+    public:
+
+        class EdgesToIterator : public std::iterator<std::input_iterator_tag, size_t> {
+        public:
+            bool operator==(const EdgesToIterator &rhs) const { return m_it == rhs.m_it; }
+
+            bool operator!=(const EdgesToIterator &rhs) const { return m_it != rhs.m_it; }
+
+            std::pair<size_t, E> operator*() {
+                auto& node = m_graph.m_nodes(m_it);
+                return std::make_pair<size_t, E>(m_owner.index, node.connectionsTo[m_owner.index]);
+            }
+
+            EdgesToIterator &operator++() {
+                next();
+                return *this;
+            }
+
+        protected:
+
+            EdgesToIterator(const Node& owner, const Graph<V, E>& graph, std::set<size_t>::iterator it) :
+                m_owner(owner), m_graph(graph), m_it(it) {}
+
+            void next(){
+                if (m_it != m_owner.connectionsFrom.end()) {
+                    ++m_it;
+                }
+            }
+
+            const Node& m_owner;
+            const Graph<V, E>& m_graph;
+            std::set<size_t>::iterator m_it;
+        };
+
+        typedef EdgesToIterator Iterator;
+
+        explicit EdgesToView(const Node& owner, const Graph<V, E>& graph) :
+            m_owner(owner), m_graph(graph) {}
+
+        size_t size() const { return m_owner.connectionsFrom.size(); }
+
+        Iterator begin() const { return Iterator(m_owner, m_graph, m_owner.connectionsFrom.begin()); }
+        Iterator end() const { return Iterator(m_owner, m_graph, m_owner.connectionsFrom.end()); }
+
+    private:
+        const Node& m_owner;
+        const Graph<V, E>& m_graph;
+    };
+
+
     EdgesFromView edges_from(size_t index) const {
         return EdgesFromView(m_nodes[index]);
+    }
+
+    EdgesToView edges_to(size_t index) const {
+        return EdgesToView(m_nodes[index], *this);
     }
 
 private:
