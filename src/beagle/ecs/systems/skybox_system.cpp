@@ -9,13 +9,13 @@
 using namespace beagle;
 
 
-SkyboxFilterUpdateVertexUboJob::SkyboxFilterUpdateVertexUboJob(EntityManager* manager) : BaseJob("SkyboxFilterUpdateVertexUboJob") {
+SkyboxFilterUpdateVertexUboJob::SkyboxFilterUpdateVertexUboJob(EntityManager* manager) {
     m_manager = manager;
     m_listener.attach(&manager->event_bus());
     m_listener.receive<OnCameraUpdate>(this);
 }
 
-JobResult SkyboxFilterUpdateVertexUboJob::execute() {
+JobResult SkyboxFilterUpdateVertexUboJob::operator()() {
 
     SkyboxFilter::VertexUbo ubo = {};
     for (auto entityId : m_dirtyCameras) {
@@ -37,11 +37,11 @@ bool SkyboxFilterUpdateVertexUboJob::receive(const OnCameraUpdate& ev) {
 }
 
 
-SkyboxFilterRenderJob::SkyboxFilterRenderJob(EntityManager* manager) : BaseJob("SkyboxFilterRenderJob") {
+SkyboxFilterRenderJob::SkyboxFilterRenderJob(EntityManager* manager) {
     m_filterGroup.attach(manager);
 }
 
-JobResult SkyboxFilterRenderJob::execute() {
+JobResult SkyboxFilterRenderJob::operator()() {
     for (auto[camera, filter] : m_filterGroup) {
 
         auto commandBuffer = filter->commandBuffer;
@@ -54,10 +54,4 @@ JobResult SkyboxFilterRenderJob::execute() {
         commandBuffer->end();
     }
     return JobResult::SUCCESS;
-}
-
-void SkyboxFilterSystem::configure(Engine* engine) {
-    auto& jobs = engine->jobs();
-    updateVertexUboJob = jobs.enqueue<SkyboxFilterUpdateVertexUboJob>(&engine->entities());
-    renderJob = jobs.enqueue<SkyboxFilterRenderJob>(&engine->entities());
 }

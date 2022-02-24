@@ -7,13 +7,18 @@
 using namespace beagle;
 
 
-MeshFilterUpdateVertexUboJob::MeshFilterUpdateVertexUboJob(EntityManager* entities) : BaseJob("MeshFilterUpdateVertexUboJob"){
+MeshFilterUpdateVertexUboJob::MeshFilterUpdateVertexUboJob(EntityManager* entities) {
     m_listener.attach(&entities->event_bus());
     m_listener.receive<OnCameraUpdate>(this);
     m_manager = entities;
 }
 
-JobResult MeshFilterUpdateVertexUboJob::execute() {
+bool MeshFilterUpdateVertexUboJob::receive(const OnCameraUpdate& ev) {
+    m_dirtyCameras.insert(ev.entityId);
+    return false;
+}
+
+JobResult MeshFilterUpdateVertexUboJob::operator()() {
     if (m_dirtyCameras.empty()){
         return JobResult::SUCCESS;
     }
@@ -29,32 +34,25 @@ JobResult MeshFilterUpdateVertexUboJob::execute() {
     return JobResult::SUCCESS;
 }
 
-bool MeshFilterUpdateVertexUboJob::receive(const OnCameraUpdate& ev) {
-    m_dirtyCameras.insert(ev.entityId);
-    return false;
-}
-
-
-MeshFilterUpdateInstanceBufferJob::MeshFilterUpdateInstanceBufferJob(EntityManager* manager) : BaseJob("MeshFilterUpdateInstanceBufferJob") {
+MeshFilterUpdateInstanceBufferJob::MeshFilterUpdateInstanceBufferJob(EntityManager* manager) {
     m_meshRendererGroup.attach(manager);
     m_meshFilterGroup.attach(manager);
 }
 
-JobResult MeshFilterUpdateInstanceBufferJob::execute() {
-
+JobResult MeshFilterUpdateInstanceBufferJob::operator()() {
     class MeshGroup {
     public:
 
         MeshGroup() = default;
         explicit MeshGroup(size_t capacity) :
-        m_buffer((uint8_t*)malloc(capacity)),
-        m_capacity(capacity),
-        m_size(0){}
+                m_buffer((uint8_t*)malloc(capacity)),
+                m_capacity(capacity),
+                m_size(0){}
 
         MeshGroup(MeshGroup&& other)  noexcept :
-        m_buffer(other.m_buffer),
-        m_capacity(other.m_capacity),
-        m_size(other.m_size)
+                m_buffer(other.m_buffer),
+                m_capacity(other.m_capacity),
+                m_size(other.m_size)
         {
             other.m_buffer = nullptr;
             other.m_capacity = 0;
@@ -160,14 +158,13 @@ JobResult MeshFilterUpdateInstanceBufferJob::execute() {
     return JobResult::SUCCESS;
 }
 
-MeshFilterUpdateFragmentUboJob::MeshFilterUpdateFragmentUboJob(EntityManager* manager) : BaseJob("MeshFilterUpdateFragmentUboJob"), m_manager(manager) {
+MeshFilterUpdateFragmentUboJob::MeshFilterUpdateFragmentUboJob(EntityManager* manager) : m_manager(manager) {
     m_meshFilterGroup.attach(manager);
     m_directionalLightGroup.attach(manager);
     m_pointLightGroup.attach(manager);
 }
 
-JobResult MeshFilterUpdateFragmentUboJob::execute() {
-
+JobResult MeshFilterUpdateFragmentUboJob::operator()() {
     MeshFilter::FragmentUbo ubo = {};
 
     for (auto[light, rotation] : m_directionalLightGroup){
@@ -203,12 +200,11 @@ JobResult MeshFilterUpdateFragmentUboJob::execute() {
 }
 
 
-MeshFilterRenderJob::MeshFilterRenderJob(EntityManager* manager) : BaseJob("MeshFilterRenderJob") {
+MeshFilterRenderJob::MeshFilterRenderJob(EntityManager* manager) {
     m_meshFilterGroup.attach(manager);
 }
 
-JobResult MeshFilterRenderJob::execute() {
-
+JobResult MeshFilterRenderJob::operator()() {
     for (auto[camera, filter] : m_meshFilterGroup){
         auto commandBuffer = filter->commandBuffer;
 
@@ -238,11 +234,4 @@ JobResult MeshFilterRenderJob::execute() {
         commandBuffer->end();
     }
     return JobResult::SUCCESS;
-}
-
-void MeshFilterSystem::configure(Engine* engine) {
-    updateVertexUboJob = engine->jobs().enqueue<MeshFilterUpdateVertexUboJob>(&engine->entities());
-    updateInstanceBufferJob = engine->jobs().enqueue<MeshFilterUpdateInstanceBufferJob>(&engine->entities());
-    updateFragmentUboJob = engine->jobs().enqueue<MeshFilterUpdateFragmentUboJob>(&engine->entities());
-    renderJob = engine->jobs().enqueue<MeshFilterRenderJob>(&engine->entities());
 }

@@ -5,21 +5,22 @@
 #ifndef BEAGLE_MESH_SYSTEM_H
 #define BEAGLE_MESH_SYSTEM_H
 
-#include <beagle/ecs/job_manager.h>
+
 #include <beagle/ecs/entity.h>
+#include <beagle/ecs/job_graph.h>
 #include <beagle/ecs/components/mesh_renderer.h>
 #include <beagle/ecs/components/transform.h>
 #include <beagle/ecs/components/camera.h>
 #include <beagle/ecs/components/light.h>
 #include <beagle/ecs/events/camera_events.h>
-#include <beagle/ecs/system_manager.h>
+
 
 namespace beagle {
 
-class MeshFilterUpdateVertexUboJob : public BaseJob {
+class MeshFilterUpdateVertexUboJob {
 public:
     explicit MeshFilterUpdateVertexUboJob(EntityManager* entities);
-    JobResult execute() override;
+    JobResult operator()();
 
     bool receive(const OnCameraUpdate& ev);
 
@@ -30,21 +31,21 @@ private:
 };
 
 
-class MeshFilterUpdateInstanceBufferJob : public BaseJob {
+class MeshFilterUpdateInstanceBufferJob  {
 public:
     explicit MeshFilterUpdateInstanceBufferJob(EntityManager* manager);
 
-    JobResult execute() override;
+    JobResult operator()();
 
 private:
     EntityGroup<Transform, MeshRenderer> m_meshRendererGroup;
     EntityGroup<MeshFilter> m_meshFilterGroup;
 };
 
-class MeshFilterUpdateFragmentUboJob : public BaseJob {
+class MeshFilterUpdateFragmentUboJob {
 public:
     explicit MeshFilterUpdateFragmentUboJob(EntityManager* manager);
-    JobResult execute() override;
+    JobResult operator()();
 
 private:
     EntityManager* m_manager;
@@ -54,24 +55,15 @@ private:
 };
 
 
-class MeshFilterRenderJob : public BaseJob {
+class MeshFilterRenderJob {
 public:
     explicit MeshFilterRenderJob(EntityManager* manager);
 
-    JobResult execute() override;
+    JobResult operator()();
 
 private:
     EntityGroup<Camera, MeshFilter> m_meshFilterGroup;
 
-};
-
-struct MeshFilterSystem : BaseSystem {
-    void configure(Engine* engine) override;
-
-    JobManager::JobHandle updateVertexUboJob;
-    JobManager::JobHandle updateInstanceBufferJob;
-    JobManager::JobHandle updateFragmentUboJob;
-    JobManager::JobHandle renderJob;
 };
 
 }

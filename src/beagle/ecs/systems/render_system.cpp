@@ -10,28 +10,22 @@
 
 using namespace beagle;
 
-RenderBeginJob::RenderBeginJob(eagle::RenderingContext* context) : m_context(context), BaseJob("RenderBeginJob") {
+RenderBeginJob::RenderBeginJob(eagle::RenderingContext* context) : m_context(context) {
 
 }
 
-JobResult RenderBeginJob::execute() {
+JobResult RenderBeginJob::operator()() {
     if (!m_context->prepare_frame()){
         return JobResult::INTERRUPT;
     }
     return JobResult::SUCCESS;
 }
 
-RenderEndJob::RenderEndJob(eagle::RenderingContext* context) : m_context(context), BaseJob("RenderEndJob") {
+RenderEndJob::RenderEndJob(eagle::RenderingContext* context) : m_context(context) {
 
 }
 
-JobResult RenderEndJob::execute() {
+JobResult RenderEndJob::operator()() {
     m_context->present_frame();
     return JobResult::SUCCESS;
-}
-
-void RenderSystem::configure(Engine* engine) {
-    auto context = eagle::Application::instance().window().rendering_context();
-    beginJob = engine->jobs().enqueue<RenderBeginJob>(context);
-    endJob = engine->jobs().enqueue<RenderEndJob>(context);
 }

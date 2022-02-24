@@ -5,28 +5,21 @@
 #ifndef BEAGLE_TRANSFORM_SYSTEM_H
 #define BEAGLE_TRANSFORM_SYSTEM_H
 
-#include <beagle/ecs/system_manager.h>
-#include <beagle/ecs/job_manager.h>
+
 #include <beagle/ecs/entity.h>
+#include <beagle/ecs/job_graph.h>
 #include <beagle/ecs/components/transform.h>
 
 namespace beagle {
 
-class TransformUpdateMatricesJob : public BaseJob {
+class TransformUpdateMatricesJob {
 public:
     explicit TransformUpdateMatricesJob(EntityManager* manager);
-    JobResult execute() override;
+    JobResult operator()();
 
 private:
     EntityGroup<Transform> m_transformGroup;
 };
-
-
-struct TransformSystem : BaseSystem {
-    void configure(Engine* engine) override;
-    JobManager::JobHandle updateMatricesJob;
-};
-
 
 }
 

@@ -5,21 +5,22 @@
 #ifndef BEAGLE_CAMERA_SYSTEM_H
 #define BEAGLE_CAMERA_SYSTEM_H
 
-#include <beagle/ecs/job_manager.h>
+
 #include <beagle/ecs/entity.h>
 #include <beagle/ecs/components/camera.h>
 #include <beagle/ecs/events/camera_events.h>
 
 #include <eagle/events/window_events.h>
-#include <beagle/ecs/system_manager.h>
+
+#include <beagle/ecs/job_graph.h>
 
 namespace beagle {
 
 
-class CameraUpdateOrthographicProjectionJob : public BaseJob {
+class CameraUpdateOrthographicProjectionJob {
 public:
     CameraUpdateOrthographicProjectionJob(EntityManager* entities, float width, float height);
-    JobResult execute() override;
+    JobResult operator()();
 
     bool receive(const eagle::OnWindowResized& ev);
 
@@ -31,10 +32,10 @@ private:
     bool m_windowResized = true;
 };
 
-class CameraUpdatePerspectiveProjectionJob : public BaseJob {
+class CameraUpdatePerspectiveProjectionJob {
 public:
     CameraUpdatePerspectiveProjectionJob(EntityManager* entities, float width, float height);
-    JobResult execute() override;
+    JobResult operator()();
 
     bool receive(const eagle::OnWindowResized& ev);
 
@@ -47,19 +48,12 @@ private:
 };
 
 
-class RenderCameraJob : public BaseJob {
+class RenderCameraJob {
 public:
     explicit RenderCameraJob(EntityManager* manager);
-    JobResult execute() override;
+    JobResult operator()();
 private:
     EntityGroup<Camera> m_cameraGroup;
-};
-
-struct CameraSystem : BaseSystem {
-    void configure(Engine* engine) override;
-    JobManager::JobHandle updateOrthographicProjectionJob;
-    JobManager::JobHandle updatePerspectiveProjectionJob;
-    JobManager::JobHandle renderJob;
 };
 
 

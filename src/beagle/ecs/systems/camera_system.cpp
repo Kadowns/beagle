@@ -7,8 +7,7 @@
 
 using namespace beagle;
 
-CameraUpdateOrthographicProjectionJob::CameraUpdateOrthographicProjectionJob(EntityManager* entities, float width, float height) :
-    BaseJob("CameraUpdateOrthographicProjectionJob") {
+CameraUpdateOrthographicProjectionJob::CameraUpdateOrthographicProjectionJob(EntityManager* entities, float width, float height) {
     m_eventBus = &entities->event_bus();
     m_width = width;
     m_height = height;
@@ -17,7 +16,14 @@ CameraUpdateOrthographicProjectionJob::CameraUpdateOrthographicProjectionJob(Ent
     m_cameraGroup.attach(entities);
 }
 
-JobResult CameraUpdateOrthographicProjectionJob::execute() {
+bool CameraUpdateOrthographicProjectionJob::receive(const eagle::OnWindowResized& ev) {
+    m_windowResized = true;
+    m_width = ev.width;
+    m_height = ev.height;
+    return false;
+}
+
+JobResult CameraUpdateOrthographicProjectionJob::operator()() {
     if (!m_windowResized){
         return JobResult::SUCCESS;
     }
@@ -36,22 +42,14 @@ JobResult CameraUpdateOrthographicProjectionJob::execute() {
                 orthographic->top,
                 orthographic->near,
                 orthographic->far
-                );
+        );
 
         m_eventBus->emit(OnCameraUpdate{projection.owner().id()});
     }
     return JobResult::SUCCESS;
 }
 
-bool CameraUpdateOrthographicProjectionJob::receive(const eagle::OnWindowResized& ev) {
-    m_windowResized = true;
-    m_width = ev.width;
-    m_height = ev.height;
-    return false;
-}
-
-CameraUpdatePerspectiveProjectionJob::CameraUpdatePerspectiveProjectionJob(EntityManager* entities, float width, float height) :
-    BaseJob("CameraUpdatePerspectiveProjectionJob") {
+CameraUpdatePerspectiveProjectionJob::CameraUpdatePerspectiveProjectionJob(EntityManager* entities, float width, float height) {
     m_eventBus = &entities->event_bus();
     m_width = width;
     m_height = height;
@@ -60,7 +58,14 @@ CameraUpdatePerspectiveProjectionJob::CameraUpdatePerspectiveProjectionJob(Entit
     m_cameraGroup.attach(entities);
 }
 
-JobResult CameraUpdatePerspectiveProjectionJob::execute() {
+bool CameraUpdatePerspectiveProjectionJob::receive(const eagle::OnWindowResized& ev) {
+    m_windowResized = true;
+    m_width = ev.width;
+    m_height = ev.height;
+    return false;
+}
+
+JobResult CameraUpdatePerspectiveProjectionJob::operator()() {
     if (!m_windowResized){
         return JobResult::SUCCESS;
     }
@@ -75,19 +80,11 @@ JobResult CameraUpdatePerspectiveProjectionJob::execute() {
     return JobResult::SUCCESS;
 }
 
-bool CameraUpdatePerspectiveProjectionJob::receive(const eagle::OnWindowResized& ev) {
-    m_windowResized = true;
-    m_width = ev.width;
-    m_height = ev.height;
-    return false;
-}
-
-RenderCameraJob::RenderCameraJob(EntityManager* manager) : BaseJob("RenderCameraJob") {
+RenderCameraJob::RenderCameraJob(EntityManager* manager) {
     m_cameraGroup.attach(manager);
 }
 
-JobResult RenderCameraJob::execute() {
-
+JobResult RenderCameraJob::operator()() {
     for (auto[camera] : m_cameraGroup){
 
         auto commandBuffer = camera->commandBuffer;
@@ -101,10 +98,4 @@ JobResult RenderCameraJob::execute() {
         camera->context->submit_command_buffer(commandBuffer);
     }
     return JobResult::SUCCESS;
-}
-
-void CameraSystem::configure(Engine* engine) {
-    updateOrthographicProjectionJob = engine->jobs().enqueue<CameraUpdateOrthographicProjectionJob>(&engine->entities(), 1280, 720);
-    updatePerspectiveProjectionJob = engine->jobs().enqueue<CameraUpdatePerspectiveProjectionJob>(&engine->entities(), 1280, 720);
-    renderJob = engine->jobs().enqueue<RenderCameraJob>(&engine->entities());
 }

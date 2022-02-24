@@ -7,11 +7,11 @@
 
 using namespace beagle;
 
-TransformUpdateMatricesJob::TransformUpdateMatricesJob(EntityManager* manager) : BaseJob("TransformUpdateMatricesJob"){
+TransformUpdateMatricesJob::TransformUpdateMatricesJob(EntityManager* manager){
     m_transformGroup.attach(manager);
 }
 
-JobResult TransformUpdateMatricesJob::execute() {
+JobResult TransformUpdateMatricesJob::operator()() {
     for (auto[tr] : m_transformGroup) {
         auto entity = tr.owner();
         glm::mat4 matrix(1);
@@ -28,8 +28,4 @@ JobResult TransformUpdateMatricesJob::execute() {
         tr->inverseMatrix = glm::inverse(matrix);
     }
     return JobResult::SUCCESS;
-}
-
-void TransformSystem::configure(Engine* engine) {
-    updateMatricesJob = engine->jobs().enqueue<TransformUpdateMatricesJob>(&engine->entities());
 }

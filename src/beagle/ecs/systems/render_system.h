@@ -5,35 +5,28 @@
 #ifndef BEAGLE_RENDER_SYSTEM_H
 #define BEAGLE_RENDER_SYSTEM_H
 
-#include <beagle/ecs/system_manager.h>
-#include <beagle/ecs/job_manager.h>
 #include <beagle/ecs/entity.h>
 #include <beagle/ecs/components/camera.h>
 
 #include <eagle/renderer/rendering_context.h>
+#include <beagle/ecs/job_graph.h>
 
 namespace beagle {
 
-class RenderBeginJob : public BaseJob {
+class RenderBeginJob {
 public:
     explicit RenderBeginJob(eagle::RenderingContext* context);
-    JobResult execute() override;
+    JobResult operator()();
 private:
     eagle::RenderingContext* m_context;
 };
 
-class RenderEndJob : public BaseJob {
+class RenderEndJob {
 public:
     explicit RenderEndJob(eagle::RenderingContext* context);
-    JobResult execute() override;
+    JobResult operator()();
 private:
     eagle::RenderingContext* m_context;
-};
-
-struct RenderSystem :  BaseSystem {
-    void configure(Engine* engine) override;
-    JobManager::JobHandle beginJob;
-    JobManager::JobHandle endJob;
 };
 
 }
