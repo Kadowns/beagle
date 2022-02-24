@@ -16,6 +16,7 @@
 #include <beagle/ecs/components/skybox.h>
 #include <beagle/ecs/systems/skybox_system.h>
 
+
 TemplateGame::TemplateGame() {
     EG_LOG_CREATE("template");
 
@@ -601,12 +602,14 @@ void TemplateGame::init(beagle::Engine* engine) {
     controller->speed = 10.0f;
     controller->mouseSpeed = 32.0f;
 
+    m_pbrJobGraph = eagle::make_strong<beagle::PBRJobGraph>(engine);
 
-    auto transformSystem = engine->systems().attach<beagle::TransformSystem>();
-    auto skyboxFilterSystem = engine->systems().attach<beagle::SkyboxFilterSystem>();
-    auto renderSystem = engine->systems().attach<beagle::RenderSystem>();
-    auto meshFilterSystem = engine->systems().attach<beagle::MeshFilterSystem>();
-    auto cameraSystem = engine->systems().attach<beagle::CameraSystem>();
+
+//    auto transformSystem = engine->systems().attach<beagle::TransformSystem>();
+//    auto skyboxFilterSystem = engine->systems().attach<beagle::SkyboxFilterSystem>();
+//    auto renderSystem = engine->systems().attach<beagle::RenderSystem>();
+//    auto meshFilterSystem = engine->systems().attach<beagle::MeshFilterSystem>();
+//    auto cameraSystem = engine->systems().attach<beagle::CameraSystem>();
 
 
     m_oscilatorGroup.attach(&engine->entities());
@@ -615,7 +618,7 @@ void TemplateGame::init(beagle::Engine* engine) {
     m_quadsGroup.attach(&engine->entities());
 
 
-    auto fullscreenRenderQuadJob = engine->jobs().enqueue<beagle::Job>([
+    auto fullscreenRenderQuadJob = m_pbrJobGraph->graph.emplace<beagle::CallableJob>([
             fullscreenQuadShader,
             fullscreenQuadDescriptorSet,
             fullscreenQuadCommandBuffer,
@@ -633,26 +636,26 @@ void TemplateGame::init(beagle::Engine* engine) {
 
 
         return beagle::JobResult::SUCCESS;
-    }, "FullscreenRenderQuad");
+    }).name("Fullscreen Render Quad");
 
-    auto rotatorJob = engine->jobs().enqueue<beagle::Job>([this, engine]{
+    auto rotatorJob = m_pbrJobGraph->graph.emplace<beagle::CallableJob>([this, engine]{
         float t = engine->timer().time();
         for (auto[rotation, rotator] : m_rotatorGroup){
             rotation->quat = glm::quat(glm::radians(t * rotator->frequency));
         }
         return beagle::JobResult::SUCCESS;
-    }, "Rotator");
+    }).name("Rotator");
 
-    auto oscilatorJob = engine->jobs().enqueue<beagle::Job>([this, engine]{
+    auto oscilatorJob = m_pbrJobGraph->graph.emplace<beagle::CallableJob>([this, engine]{
         float t = engine->timer().time();
 
         for (auto[tr, osc] : m_oscilatorGroup){
             tr->vec.x = osc->anchor.x + sinf(t * osc->frequency) * osc->amplitude;
         }
         return beagle::JobResult::SUCCESS;
-    }, "Oscilator");
+    }).name("Oscilator");
 
-    auto scalerJob = engine->jobs().enqueue<beagle::Job>([this, engine]{
+    auto scalerJob = m_pbrJobGraph->graph.emplace<beagle::CallableJob>([this, engine]{
         float t = engine->timer().time();
 
         for (auto[tr, osc] : m_scalerGroup){
@@ -663,39 +666,47 @@ void TemplateGame::init(beagle::Engine* engine) {
             tr->vec = scale;
         }
         return beagle::JobResult::SUCCESS;
-    }, "Scaler");
-    auto cameraControllerJob = engine->jobs().enqueue<CameraControlJob>(&engine->entities(), &engine->timer());
-    transformSystem->updateMatricesJob.run_after(cameraControllerJob);
-    transformSystem->updateMatricesJob.run_after(scalerJob);
-    transformSystem->updateMatricesJob.run_after(oscilatorJob);
-    transformSystem->updateMatricesJob.run_after(rotatorJob);
+    }).name("Scaler");
+    auto cameraControllerJob = m_pbrJobGraph->graph.emplace<CameraControlJob>(&engine->entities(), &engine->timer()).name("Camera Controller");;
+    m_pbrJobGraph->updateTransformJob.succeed(cameraControllerJob);
+    m_pbrJobGraph->updateTransformJob.succeed(scalerJob);
+    m_pbrJobGraph->updateTransformJob.succeed(oscilatorJob);
+    m_pbrJobGraph->updateTransformJob.succeed(rotatorJob);
 
-    meshFilterSystem->updateInstanceBufferJob.run_after(transformSystem->updateMatricesJob);
-    meshFilterSystem->updateVertexUboJob.run_after(transformSystem->updateMatricesJob);
-    meshFilterSystem->updateVertexUboJob.run_after(cameraSystem->updatePerspectiveProjectionJob);
-    meshFilterSystem->updateFragmentUboJob.run_after(cameraControllerJob);
+    m_pbrJobGraph->meshUpdateFragmentUboJob.succeed(cameraControllerJob);
 
-    skyboxFilterSystem->updateVertexUboJob.run_after(cameraSystem->updatePerspectiveProjectionJob);
-    skyboxFilterSystem->updateVertexUboJob.run_after(transformSystem->updateMatricesJob);
+    m_pbrJobGraph->beginRenderJob.precede(fullscreenRenderQuadJob);
+    m_pbrJobGraph->cameraRenderJob.succeed(fullscreenRenderQuadJob);
 
-    renderSystem->beginJob.run_after(meshFilterSystem->updateVertexUboJob);
-    renderSystem->beginJob.run_after(meshFilterSystem->updateFragmentUboJob);
-    renderSystem->beginJob.run_after(meshFilterSystem->updateInstanceBufferJob);
-    renderSystem->beginJob.run_after(skyboxFilterSystem->updateVertexUboJob);
-
-    meshFilterSystem->renderJob.run_after(renderSystem->beginJob);
-    skyboxFilterSystem->renderJob.run_after(renderSystem->beginJob);
-    fullscreenRenderQuadJob.run_after(renderSystem->beginJob);
-
-    cameraSystem->renderJob.run_after(meshFilterSystem->renderJob);
-    cameraSystem->renderJob.run_after(skyboxFilterSystem->renderJob);
-    cameraSystem->renderJob.run_after(fullscreenRenderQuadJob);
-
-    renderSystem->endJob.run_after(cameraSystem->renderJob);
+//    meshFilterSystem->updateInstanceBufferJob.run_after(transformSystem->updateMatricesJob);
+//    meshFilterSystem->updateVertexUboJob.run_after(transformSystem->updateMatricesJob);
+//    meshFilterSystem->updateVertexUboJob.run_after(cameraSystem->updatePerspectiveProjectionJob);
+//    meshFilterSystem->updateFragmentUboJob.run_after(cameraControllerJob);
+//
+//    skyboxFilterSystem->updateVertexUboJob.run_after(cameraSystem->updatePerspectiveProjectionJob);
+//    skyboxFilterSystem->updateVertexUboJob.run_after(transformSystem->updateMatricesJob);
+//
+//    renderSystem->beginJob.run_after(meshFilterSystem->updateVertexUboJob);
+//    renderSystem->beginJob.run_after(meshFilterSystem->updateFragmentUboJob);
+//    renderSystem->beginJob.run_after(meshFilterSystem->updateInstanceBufferJob);
+//    renderSystem->beginJob.run_after(skyboxFilterSystem->updateVertexUboJob);
+//
+//    meshFilterSystem->renderJob.run_after(renderSystem->beginJob);
+//    skyboxFilterSystem->renderJob.run_after(renderSystem->beginJob);
+//
+//    fullscreenRenderQuadJob.run_after(renderSystem->beginJob);
+//
+//    cameraSystem->renderJob.run_after(meshFilterSystem->renderJob);
+//    cameraSystem->renderJob.run_after(skyboxFilterSystem->renderJob);
+//    cameraSystem->renderJob.run_after(fullscreenRenderQuadJob);
+//
+//    renderSystem->endJob.run_after(cameraSystem->renderJob);
 }
 
 void TemplateGame::step(beagle::Engine* engine) {
-
+    EG_TRACE("template", "Begin step");
+    engine->executor().execute(m_pbrJobGraph->graph);
+    EG_TRACE("template", "End step");
 }
 
 void TemplateGame::destroy(beagle::Engine* engine) {

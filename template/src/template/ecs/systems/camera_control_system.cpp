@@ -6,14 +6,13 @@
 
 #include <beagle/ecs/events/camera_events.h>
 
-CameraControlJob::CameraControlJob(beagle::EntityManager* manager, eagle::Timer* timer) : BaseJob("CameraControlJob") {
+CameraControlJob::CameraControlJob(beagle::EntityManager* manager, eagle::Timer* timer) {
     m_cameraPositionGroup.attach(manager);
     m_timer = timer;
     m_eventBus = &manager->event_bus();
 }
 
-beagle::JobResult CameraControlJob::execute() {
-
+beagle::JobResult CameraControlJob::operator()() {
     auto dt = m_timer->delta_time();
 
     for (auto[position, rotation, controller, camera] : m_cameraPositionGroup) {

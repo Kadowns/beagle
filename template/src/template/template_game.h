@@ -6,6 +6,7 @@
 #define TEMPLATE_GAME_PLUGIN_H
 
 #include <beagle/engine.h>
+#include <beagle/ecs/pbr_job_graph.h>
 
 struct Oscilator {
     Oscilator(const glm::vec3& anchor):anchor(anchor){}
@@ -54,6 +55,7 @@ private:
     beagle::EntityGroup<beagle::Position, Oscilator> m_oscilatorGroup;
     beagle::EntityGroup<beagle::Scale, Scaler> m_scalerGroup;
     beagle::EntityGroup<beagle::Rotation, Rotator> m_rotatorGroup;
+    eagle::StrongPointer<beagle::PBRJobGraph> m_pbrJobGraph;
 };
 
 

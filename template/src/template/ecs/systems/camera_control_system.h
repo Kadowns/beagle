@@ -5,7 +5,7 @@
 #ifndef TEMPLATE_APP_CAMERA_CONTROL_SYSTEM_H
 #define TEMPLATE_APP_CAMERA_CONTROL_SYSTEM_H
 
-#include <beagle/ecs/job_manager.h>
+
 #include <beagle/ecs/entity.h>
 
 #include <template/ecs/components/camera_controller.h>
@@ -13,11 +13,12 @@
 #include <beagle/ecs/components/camera.h>
 
 #include <eagle/timer.h>
+#include <beagle/ecs/job_graph.h>
 
-class CameraControlJob : public beagle::BaseJob {
+class CameraControlJob {
 public:
     explicit CameraControlJob(beagle::EntityManager* manager, eagle::Timer* timer);
-    beagle::JobResult execute() override;
+    beagle::JobResult operator()();
 
 private:
     beagle::EntityGroup<beagle::Position, beagle::Rotation, CameraController, beagle::Camera> m_cameraPositionGroup;
