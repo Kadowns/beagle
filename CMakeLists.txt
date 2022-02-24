@@ -7,15 +7,14 @@ set(BEAGLE_SOURCES
         src/beagle/beagle_global_definitions.h
         src/beagle/engine.cpp
         src/beagle/ecs/entity.cpp
-        src/beagle/ecs/job_manager.cpp
         src/beagle/ecs/job_graph.cpp
         src/beagle/ecs/job_executor.cpp
-        src/beagle/ecs/system_manager.cpp
         src/beagle/ecs/systems/transform_system.cpp
         src/beagle/ecs/systems/camera_system.cpp
         src/beagle/ecs/systems/render_system.cpp
         src/beagle/ecs/systems/mesh_system.cpp
         src/beagle/ecs/systems/skybox_system.cpp
+        src/beagle/ecs/pbr_job_graph.cpp
         src/beagle/assets/mesh_pool.cpp
         src/beagle/assets/material_pool.cpp
         src/beagle/assets/shader_pool.cpp
