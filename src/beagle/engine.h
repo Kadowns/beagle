@@ -7,9 +7,9 @@
 
 #include <beagle/beagle_global_definitions.h>
 #include <beagle/game.h>
+#include <beagle/ecs/thread_pool.h>
 #include <beagle/ecs/entity.h>
-#include <beagle/ecs/job_manager.h>
-#include <beagle/ecs/system_manager.h>
+#include <beagle/ecs/job_executor.h>
 #include <beagle/ecs/components/transform.h>
 #include <beagle/assets/asset_manager.h>
 
@@ -39,15 +39,17 @@ public:
 
     inline EntityManager& entities() { return m_entityManager; }
     inline AssetManager& assets() { return *m_assetManager; }
-    inline JobManager& jobs() { return m_jobSystem; }
-    inline SystemManager& systems() { return m_systemManager; }
     inline eagle::Timer& timer() { return m_timer; }
+    inline ThreadPool& thread_pool() { return m_threadPool; }
+    inline JobExecutor& executor() { return m_executor; }
 
 private:
 
     void wait_for_target_fps(float dt);
 
 private:
+    ThreadPool m_threadPool;
+    JobExecutor m_executor;
     eagle::EventListener m_listener;
     eagle::Timer m_timer;
 
@@ -55,8 +57,6 @@ private:
     EntityManager m_entityManager;
     std::unique_ptr<AssetManager> m_assetManager;
 
-    JobManager m_jobSystem;
-    SystemManager m_systemManager;
     std::unique_ptr<Game> m_game;
 
 };

@@ -9,7 +9,7 @@
 
 namespace beagle {
 
-Engine::Engine(Game* game) : m_game(game), m_systemManager(this){
+Engine::Engine(Game* game) : m_threadPool(1), m_executor(m_threadPool), m_game(game) {
 
 }
 
@@ -31,7 +31,6 @@ void Engine::init() {
 void Engine::step() {
     m_timer.update();
     m_game->step(this);
-    m_jobSystem.execute();
 }
 
 void Engine::destroy() {
@@ -55,7 +54,7 @@ void Engine::wait_for_target_fps(float dt) {
     const float targetDt = 0.008f;
     if (dt < targetDt){
         int64_t sleepForMs = (targetDt - dt) * 1000;
-        std::this_thread::sleep_for(std::chrono::milliseconds(sleepForMs));
+//        std::this_thread::sleep_for(std::chrono::milliseconds(sleepForMs));
     }
 }
 
