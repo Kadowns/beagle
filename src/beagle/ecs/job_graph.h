@@ -7,6 +7,9 @@
 
 #include <beagle/utils/graph.h>
 #include <eagle/memory/pointer.h>
+#include <functional>
+#include <string>
+#include <memory>
 
 namespace beagle {
 
@@ -15,9 +18,7 @@ enum class JobResult {
     INTERRUPT = 1
 };
 
-
 class Job;
-
 
 class JobGraph {
 private:
@@ -30,8 +31,17 @@ private:
             return m_job();
         }
 
+        void name(const std::string& name) {
+            m_name = name;
+        }
+
+        const std::string& name() const{
+            return m_name;
+        }
+
     private:
         std::function<JobResult()> m_job;
+        std::string m_name;
     };
 
 public:
@@ -73,6 +83,9 @@ public:
     };
 
     template<typename ViewType>
+    class JobConnectionView;
+
+    template<typename ViewType>
     class JobConnectionIterator : public std::iterator<std::input_iterator_tag, size_t> {
     public:
 
@@ -87,7 +100,7 @@ public:
     private:
         typedef typename ViewType::Iterator ViewIterator;
 
-        JobConnectionIterator(const JobGraph& owner, const ViewType& view, ViewIterator it) :
+        JobConnectionIterator(JobGraph& owner, ViewType& view, ViewIterator it) :
             m_owner(owner),
             m_view(view),
             m_it(it){
@@ -97,10 +110,10 @@ public:
         void next();
 
     private:
-        friend class JobConnectionView;
+        friend class JobConnectionView<ViewType>;
 
-        const JobGraph& m_owner;
-        const ViewType& m_view;
+        JobGraph& m_owner;
+        ViewType& m_view;
         ViewIterator m_it;
     };
 
@@ -119,21 +132,18 @@ public:
     private:
         friend JobGraph;
 
-        JobConnectionView(const JobGraph& owner, const ViewType& view) : m_owner(owner), m_view(view) {}
+        JobConnectionView(JobGraph& owner, const ViewType& view) : m_owner(owner), m_view(view) {}
 
     private:
-        const JobGraph& m_owner;
+        JobGraph& m_owner;
         ViewType m_view;
     };
 
     typedef JobConnectionView<EdgesToView> JobPredecessors;
     typedef JobConnectionView<EdgesFromView> JobSuccessors;
 
-    template<typename F>
-    Job emplace(F&& callable);
-
-    template<typename ...F>
-    std::tuple<F...> emplace(F&&... callables);
+    template<typename F, typename ...Args>
+    Job emplace(Args&&... args);
 
     inline void precede(Job a, Job b);
 
@@ -146,11 +156,11 @@ public:
 
     JobSuccessors successors(const Job& job);
 
-    JobPredecessors predecessors(const Job& job) const;
-
-    JobSuccessors successors(const Job& job) const;
-
     Job at(size_t index);
+
+    void name(const Job& job, const std::string& name);
+
+    const std::string& name(const Job& job) const;
 
     size_t size() const;
 
@@ -161,19 +171,22 @@ private:
     Graph<JobVertex, JobRelation> m_graph;
 };
 
-
-
-typedef JobGraph::JobRelation JobRelation;
 typedef JobGraph::JobPredecessors JobPredecessors;
 typedef JobGraph::JobSuccessors JobSuccessors;
 
 class Job {
 public:
-    explicit Job(JobGraph& owner, size_t index) : m_owner(owner), m_index(index) {}
+    Job() : m_owner(nullptr), m_index(~0UL) {}
+
+    explicit Job(JobGraph* owner, size_t index) : m_owner(owner), m_index(index) {}
 
     void precede(Job other);
 
     void succeed(Job other);
+
+    Job& name(const std::string& name);
+
+    const std::string& name() const;
 
     JobPredecessors predecessors();
 
@@ -189,19 +202,33 @@ public:
 
 private:
     friend class JobGraph;
-    JobGraph& m_owner;
+    JobGraph* m_owner;
     size_t m_index;
+};
+
+class CallableJob {
+public:
+
+    explicit CallableJob(std::function<JobResult()> callable) : m_callable(std::move(callable)) {}
+
+    JobResult operator()(){
+        return m_callable();
+    }
+
+private:
+    std::function<JobResult()> m_callable;
 };
 
 template<typename ViewType>
 Job JobGraph::JobConnectionIterator<ViewType>::operator*() {
-    return Job(m_owner, m_it->first);
+    auto pair = *m_it;
+    return Job(&m_owner, pair.first);
 }
 
 template<typename ViewType>
 void JobGraph::JobConnectionIterator<ViewType>::next() {
     if(m_it != m_view.end()){
-        m_it++;
+        ++m_it;
     }
 }
 
@@ -211,14 +238,11 @@ JobGraph::JobConnectionIterator<ViewType>& JobGraph::JobConnectionIterator<ViewT
     return *this;
 }
 
-template<typename F>
-Job JobGraph::emplace(F&& callable) {
-    return Job(*this, m_graph.insert(JobVertex(callable)));
-}
-
-template<typename... F>
-std::tuple<F...> JobGraph::emplace(F&&... callables) {
-    return std::make_tuple(emplace<F>(callables)...);
+template<typename F, typename ...Args>
+Job JobGraph::emplace(Args&&... args) {
+    return Job(this, m_graph.insert(JobVertex([wrapper = std::make_shared<F>(std::forward<Args>(args)...)]{
+        return (*wrapper)();
+    })));
 }
 
 }
