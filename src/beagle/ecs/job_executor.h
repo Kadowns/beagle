@@ -7,6 +7,7 @@
 
 #include <beagle/ecs/thread_pool.h>
 #include <beagle/ecs/job_graph.h>
+#include <eagle/log.h>
 
 namespace beagle {
 
@@ -30,13 +31,7 @@ public:
             std::lock_guard<std::mutex> lock(m_queueMutex);
             switch(result){
                 case JobResult::SUCCESS:
-                    m_completedJobs.insert(job.id());
-                    for (auto successor : job.successors()){
-                        if (is_available(successor)){
-                            auto id = successor.id();
-                            m_availableJobs.push(id);
-                        }
-                    }
+                    success(job);
                     break;
                 case JobResult::INTERRUPT:
                     interrupt(job);
@@ -45,7 +40,7 @@ public:
         }
 
         bool has_available_job() const {
-            return m_availableJobs.empty();
+            return !m_availableJobs.empty();
         }
 
         bool is_complete(const Job& job){
@@ -74,6 +69,16 @@ public:
             }
         }
 
+        void success(const Job& job){
+            m_completedJobs.insert(job.id());
+            for (auto successor : job.successors()){
+                if (is_available(successor)){
+                    auto id = successor.id();
+                    m_availableJobs.push(id);
+                }
+            }
+        }
+
         bool is_available(const Job& job){
             for (auto predecessor : job.predecessors()){
                 if (!is_complete(predecessor)){
@@ -98,8 +103,8 @@ public:
 
         JobExecution execution(graph);
         std::condition_variable jobCompleted;
+        std::unique_lock<std::mutex> lock(execution.mutex());
         while (!execution.is_complete()){
-            std::unique_lock<std::mutex> lock(execution.mutex());
 
             jobCompleted.wait(lock, [&execution]{
                 return execution.has_available_job() || execution.is_complete();
@@ -108,13 +113,15 @@ public:
             if (execution.is_complete()){
                 break;
             }
-
+            lock.unlock();
             auto job = execution.next();
+            EG_TRACE("beagle", "Executing: {0}", job.name());
             m_threadPool.execute([&execution, &jobCompleted, job]() mutable {
                 auto result = job.execute();
                 execution.complete(job, result);
                 jobCompleted.notify_all();
             });
+            lock.lock();
         }
     }
 
