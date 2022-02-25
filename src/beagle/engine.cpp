@@ -9,7 +9,7 @@
 
 namespace beagle {
 
-Engine::Engine(Game* game) : m_threadPool(1), m_executor(m_threadPool), m_game(game) {
+Engine::Engine(Game* game) : m_threadPool(4), m_executor(m_threadPool), m_game(game) {
 
 }
 
