@@ -225,57 +225,8 @@ void TemplateGame::init(beagle::Engine* engine) {
 
     engine->assets().mesh_pool().upload();
 
-
-    eagle::RenderAttachmentDescription colorAttachmentDescription = {};
-    colorAttachmentDescription.format = eagle::Format::R32G32B32A32_SFLOAT;
-    colorAttachmentDescription.loadOp = eagle::AttachmentLoadOperator::CLEAR;
-    colorAttachmentDescription.storeOp = eagle::AttachmentStoreOperator::STORE;
-    colorAttachmentDescription.stencilLoadOp = eagle::AttachmentLoadOperator::DONT_CARE;
-    colorAttachmentDescription.stencilStoreOp = eagle::AttachmentStoreOperator::DONT_CARE;
-    colorAttachmentDescription.finalLayout = eagle::ImageLayout::GENERAL;
-    colorAttachmentDescription.initialLayout = eagle::ImageLayout::UNDEFINED;
-
-    eagle::RenderAttachmentDescription depthAttachmentDescription = {};
-    depthAttachmentDescription.format = context->properties().depthFormat;
-    depthAttachmentDescription.loadOp = eagle::AttachmentLoadOperator::CLEAR;
-    depthAttachmentDescription.storeOp = eagle::AttachmentStoreOperator::DONT_CARE;
-    depthAttachmentDescription.stencilLoadOp = eagle::AttachmentLoadOperator::DONT_CARE;
-    depthAttachmentDescription.stencilStoreOp = eagle::AttachmentStoreOperator::DONT_CARE;
-    depthAttachmentDescription.finalLayout = eagle::ImageLayout::DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-    depthAttachmentDescription.initialLayout = eagle::ImageLayout::UNDEFINED;
-
-
-    eagle::RenderPassCreateInfo offscreenRenderPassCreateInfo = {};
-    offscreenRenderPassCreateInfo.attachments = {colorAttachmentDescription, depthAttachmentDescription};
-
-    eagle::SubpassDescription subpassDescription = {};
-    subpassDescription.colorReferences = {{0, eagle::ImageLayout::COLOR_ATTACHMENT_OPTIMAL}};
-    subpassDescription.depthStencilReference = {1, eagle::ImageLayout::DEPTH_STENCIL_ATTACHMENT_OPTIMAL};
-
-    offscreenRenderPassCreateInfo.subpassDescriptions = {subpassDescription};
-
-    offscreenRenderPassCreateInfo.subpassDependencies.resize(2);
-    offscreenRenderPassCreateInfo.subpassDependencies[0].srcSubpass = EG_SUBPASS_EXTERNAL;
-    offscreenRenderPassCreateInfo.subpassDependencies[0].dstSubpass = 0;
-    offscreenRenderPassCreateInfo.subpassDependencies[0].srcStageMask = eagle::PipelineStageFlagsBits::COLOR_ATTACHMENT_OUTPUT_BIT;
-    offscreenRenderPassCreateInfo.subpassDependencies[0].dstStageMask = eagle::PipelineStageFlagsBits::COLOR_ATTACHMENT_OUTPUT_BIT;
-    offscreenRenderPassCreateInfo.subpassDependencies[0].srcAccessMask = 0;
-    offscreenRenderPassCreateInfo.subpassDependencies[0].dstAccessMask = eagle::AccessFlagBits::COLOR_ATTACHMENT_READ_BIT | eagle::AccessFlagBits::COLOR_ATTACHMENT_WRITE_BIT;
-
-    offscreenRenderPassCreateInfo.subpassDependencies[1].srcSubpass = 0;
-    offscreenRenderPassCreateInfo.subpassDependencies[1].dstSubpass = EG_SUBPASS_EXTERNAL;
-    offscreenRenderPassCreateInfo.subpassDependencies[1].srcStageMask = eagle::PipelineStageFlagsBits::COLOR_ATTACHMENT_OUTPUT_BIT;
-    offscreenRenderPassCreateInfo.subpassDependencies[1].dstStageMask = eagle::PipelineStageFlagsBits::FRAGMENT_SHADER_BIT;
-    offscreenRenderPassCreateInfo.subpassDependencies[1].srcAccessMask = eagle::AccessFlagBits::COLOR_ATTACHMENT_WRITE_BIT;
-    offscreenRenderPassCreateInfo.subpassDependencies[1].dstAccessMask = eagle::AccessFlagBits::SHADER_READ_BIT;
-    offscreenRenderPassCreateInfo.subpassDependencies[1].dependencyFlags = eagle::DependencyFlagBits::BY_REGION_BIT;
-
-
-    auto offscreenRenderPass = context->create_render_pass(std::move(offscreenRenderPassCreateInfo));
-
-
     eagle::ShaderCreateInfo shaderCreateInfo = {
-            offscreenRenderPass,
+            context->main_render_pass(),
             {
                     {eagle::ShaderStage::VERTEX, "shaders/mesh.vert.spv"},
                     {eagle::ShaderStage::FRAGMENT, "shaders/pbr/pbr_mesh.frag.spv"},
@@ -323,10 +274,9 @@ void TemplateGame::init(beagle::Engine* engine) {
     };
     fullscreenQuadShaderCreateInfo.cullMode = eagle::CullMode::NONE;
 
-    auto fullscreenQuadShader = engine->assets().shader_pool().insert(fullscreenQuadShaderCreateInfo, "fullscreen_quad");
 
     eagle::ShaderCreateInfo skyboxShaderCreateInfo = {
-            offscreenRenderPass,
+            context->main_render_pass(),
             {
                     {eagle::ShaderStage::VERTEX, "shaders/skybox/skybox.vert.spv"},
                     {eagle::ShaderStage::FRAGMENT, "shaders/skybox/skybox.frag.spv"},
@@ -439,59 +389,6 @@ void TemplateGame::init(beagle::Engine* engine) {
 
     integrateBrdfComputeShader->join();
 
-
-
-    eagle::ImageCreateInfo colorImageCreateInfo = {};
-    colorImageCreateInfo.format = eagle::Format::R32G32B32A32_SFLOAT;
-    colorImageCreateInfo.width = window.width();
-    colorImageCreateInfo.height = window.height();
-    colorImageCreateInfo.mipLevels = 1;
-    colorImageCreateInfo.arrayLayers = 1;
-    colorImageCreateInfo.useMultiBuffering = true;
-    colorImageCreateInfo.layout = eagle::ImageLayout::GENERAL;
-    colorImageCreateInfo.tiling = eagle::ImageTiling::OPTIMAL;
-    colorImageCreateInfo.memoryProperties = {eagle::MemoryProperty::DEVICE_LOCAL};
-    colorImageCreateInfo.usages = {eagle::ImageUsage::COLOR_ATTACHMENT, eagle::ImageUsage::SAMPLED};
-    colorImageCreateInfo.aspects = {eagle::ImageAspect::COLOR};
-
-    eagle::TextureCreateInfo colorTextureCreateInfo = {};
-    colorTextureCreateInfo.imageCreateInfo = colorImageCreateInfo;
-    colorTextureCreateInfo.filter = eagle::Filter::LINEAR;
-
-    auto colorTexture = context->create_texture(colorTextureCreateInfo);
-
-    eagle::ImageCreateInfo depthImageCreateInfo = {};
-    depthImageCreateInfo.format = context->properties().depthFormat;
-    depthImageCreateInfo.width = window.width();
-    depthImageCreateInfo.height = window.height();
-    depthImageCreateInfo.mipLevels = 1;
-    depthImageCreateInfo.arrayLayers = 1;
-    depthImageCreateInfo.layout = eagle::ImageLayout::DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-    depthImageCreateInfo.tiling = eagle::ImageTiling::OPTIMAL;
-    depthImageCreateInfo.memoryProperties = {eagle::MemoryProperty::DEVICE_LOCAL};
-    depthImageCreateInfo.usages = {eagle::ImageUsage::DEPTH_STENCIL_ATTACHMENT};
-    depthImageCreateInfo.aspects = {eagle::ImageAspect::DEPTH};
-
-    if (depthImageCreateInfo.format == eagle::Format::D32_SFLOAT_S8_UINT || depthImageCreateInfo.format == eagle::Format::D24_UNORM_S8_UINT) {
-        depthImageCreateInfo.aspects.emplace_back(eagle::ImageAspect::STENCIL);
-    }
-
-    auto depthImage = context->create_image(depthImageCreateInfo);
-
-    eagle::FramebufferCreateInfo framebufferCreateInfo = {};
-    framebufferCreateInfo.width = window.width();
-    framebufferCreateInfo.height = window.height();
-    framebufferCreateInfo.renderPass = offscreenRenderPass;
-    framebufferCreateInfo.attachments = {colorTexture->image(), depthImage};
-
-    auto offscreenFramebuffer = context->create_framebuffer(framebufferCreateInfo);
-
-    auto fullscreenQuadDescriptorSet = context->create_descriptor_set(fullscreenQuadShader->get()->get_descriptor_set_layout(0), {
-            colorTexture
-    });
-
-    auto fullscreenQuadCommandBuffer = context->create_command_buffer({eagle::CommandBufferLevel::SECONDARY});
-
     struct MaterialData {
         alignas(16) glm::vec4 albedo;
         float metallic;
@@ -524,8 +421,6 @@ void TemplateGame::init(beagle::Engine* engine) {
 
     woodMaterial->update_uniform(0, MaterialData{glm::vec4(0.2f, 0.7f, 0.5f, 1.0f), 0.1f, 0.6f, 8.0f});
     woodMaterial->update_texture(1, woodTexture);
-
-
 
     const int entityCount = 100;
     const float range = 30.0f;
@@ -583,19 +478,11 @@ void TemplateGame::init(beagle::Engine* engine) {
     auto meshFilter = e.assign<beagle::MeshFilter>(context, &engine->assets().mesh_pool(), irradianceMap, prefilterMap, brdfMap);
     auto skyboxFilter = e.assign<beagle::SkyboxFilter>(context, skyboxMaterial);
 
-    beagle::Camera::Pass offscreenPass = {};
-    offscreenPass.renderPass = offscreenRenderPass;
-    offscreenPass.framebuffer = offscreenFramebuffer;
-    offscreenPass.commandBuffers.emplace_back(meshFilter->commandBuffer);
-    offscreenPass.commandBuffers.emplace_back(skyboxFilter->commandBuffer);
-
-    camera->passes.emplace_back(std::move(offscreenPass));
-
     beagle::Camera::Pass screenPass = {};
     screenPass.renderPass = context->main_render_pass();
     screenPass.framebuffer = context->main_frambuffer();
-    screenPass.commandBuffers.emplace_back(fullscreenQuadCommandBuffer);
-
+    screenPass.commandBuffers.emplace_back(meshFilter->commandBuffer);
+    screenPass.commandBuffers.emplace_back(skyboxFilter->commandBuffer);
     camera->passes.emplace_back(std::move(screenPass));
 
     auto controller = e.assign<CameraController>(&eagle::Application::instance().event_bus());
@@ -604,39 +491,11 @@ void TemplateGame::init(beagle::Engine* engine) {
 
     m_pbrJobGraph = eagle::make_strong<beagle::PBRJobGraph>(engine);
 
-
-//    auto transformSystem = engine->systems().attach<beagle::TransformSystem>();
-//    auto skyboxFilterSystem = engine->systems().attach<beagle::SkyboxFilterSystem>();
-//    auto renderSystem = engine->systems().attach<beagle::RenderSystem>();
-//    auto meshFilterSystem = engine->systems().attach<beagle::MeshFilterSystem>();
-//    auto cameraSystem = engine->systems().attach<beagle::CameraSystem>();
-
-
     m_oscilatorGroup.attach(&engine->entities());
     m_scalerGroup.attach(&engine->entities());
     m_rotatorGroup.attach(&engine->entities());
     m_quadsGroup.attach(&engine->entities());
 
-
-    auto fullscreenRenderQuadJob = m_pbrJobGraph->graph.emplace<beagle::CallableJob>([
-            fullscreenQuadShader,
-            fullscreenQuadDescriptorSet,
-            fullscreenQuadCommandBuffer,
-            context]{
-
-        fullscreenQuadCommandBuffer->begin(context->main_render_pass(), context->main_frambuffer());
-
-        fullscreenQuadCommandBuffer->bind_shader(*fullscreenQuadShader);
-
-        fullscreenQuadCommandBuffer->bind_descriptor_sets(fullscreenQuadDescriptorSet, 0);
-
-        fullscreenQuadCommandBuffer->draw(3);
-
-        fullscreenQuadCommandBuffer->end();
-
-
-        return beagle::JobResult::SUCCESS;
-    }).name("Fullscreen Render Quad");
 
     auto rotatorJob = m_pbrJobGraph->graph.emplace<beagle::CallableJob>([this, engine]{
         float t = engine->timer().time();
@@ -668,39 +527,12 @@ void TemplateGame::init(beagle::Engine* engine) {
         return beagle::JobResult::SUCCESS;
     }).name("Scaler");
     auto cameraControllerJob = m_pbrJobGraph->graph.emplace<CameraControlJob>(&engine->entities(), &engine->timer()).name("Camera Controller");;
-    m_pbrJobGraph->updateTransformJob.succeed(cameraControllerJob);
-    m_pbrJobGraph->updateTransformJob.succeed(scalerJob);
-    m_pbrJobGraph->updateTransformJob.succeed(oscilatorJob);
-    m_pbrJobGraph->updateTransformJob.succeed(rotatorJob);
+    cameraControllerJob.precede(m_pbrJobGraph->updateTransformJob);
+    scalerJob.precede(m_pbrJobGraph->updateTransformJob);
+    oscilatorJob.precede(m_pbrJobGraph->updateTransformJob);
+    rotatorJob.precede(m_pbrJobGraph->updateTransformJob);
 
-    m_pbrJobGraph->meshUpdateFragmentUboJob.succeed(cameraControllerJob);
-
-    m_pbrJobGraph->beginRenderJob.precede(fullscreenRenderQuadJob);
-    m_pbrJobGraph->cameraRenderJob.succeed(fullscreenRenderQuadJob);
-
-//    meshFilterSystem->updateInstanceBufferJob.run_after(transformSystem->updateMatricesJob);
-//    meshFilterSystem->updateVertexUboJob.run_after(transformSystem->updateMatricesJob);
-//    meshFilterSystem->updateVertexUboJob.run_after(cameraSystem->updatePerspectiveProjectionJob);
-//    meshFilterSystem->updateFragmentUboJob.run_after(cameraControllerJob);
-//
-//    skyboxFilterSystem->updateVertexUboJob.run_after(cameraSystem->updatePerspectiveProjectionJob);
-//    skyboxFilterSystem->updateVertexUboJob.run_after(transformSystem->updateMatricesJob);
-//
-//    renderSystem->beginJob.run_after(meshFilterSystem->updateVertexUboJob);
-//    renderSystem->beginJob.run_after(meshFilterSystem->updateFragmentUboJob);
-//    renderSystem->beginJob.run_after(meshFilterSystem->updateInstanceBufferJob);
-//    renderSystem->beginJob.run_after(skyboxFilterSystem->updateVertexUboJob);
-//
-//    meshFilterSystem->renderJob.run_after(renderSystem->beginJob);
-//    skyboxFilterSystem->renderJob.run_after(renderSystem->beginJob);
-//
-//    fullscreenRenderQuadJob.run_after(renderSystem->beginJob);
-//
-//    cameraSystem->renderJob.run_after(meshFilterSystem->renderJob);
-//    cameraSystem->renderJob.run_after(skyboxFilterSystem->renderJob);
-//    cameraSystem->renderJob.run_after(fullscreenRenderQuadJob);
-//
-//    renderSystem->endJob.run_after(cameraSystem->renderJob);
+    cameraControllerJob.precede(m_pbrJobGraph->meshUpdateFragmentUboJob);
 }
 
 void TemplateGame::step(beagle::Engine* engine) {
