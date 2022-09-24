@@ -19,9 +19,9 @@ namespace beagle {
 struct Camera {
 
     struct Pass {
-        eagle::WeakPointer<eagle::RenderPass> renderPass;
-        eagle::WeakPointer<eagle::Framebuffer> framebuffer;
-        std::vector<eagle::WeakPointer<eagle::CommandBuffer>> commandBuffers;
+        std::shared_ptr<eagle::RenderPass> renderPass;
+        std::shared_ptr<eagle::Framebuffer> framebuffer;
+        std::vector<std::shared_ptr<eagle::CommandBuffer>> commandBuffers;
     };
 
     explicit Camera(eagle::RenderingContext* context) :
@@ -32,7 +32,7 @@ struct Camera {
     }
 
     eagle::RenderingContext* context;
-    eagle::WeakPointer<eagle::CommandBuffer> commandBuffer;
+    std::shared_ptr<eagle::CommandBuffer> commandBuffer;
     std::vector<Pass> passes;
 };
 

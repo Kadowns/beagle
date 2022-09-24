@@ -8,6 +8,7 @@
 #include <beagle/engine.h>
 #include <beagle/ecs/pbr_job_graph.h>
 
+
 struct Oscilator {
     Oscilator(const glm::vec3& anchor):anchor(anchor){}
     float amplitude = 1.0f;

@@ -9,14 +9,14 @@ using namespace beagle;
 Material::Material(eagle::RenderingContext* context, const ShaderHandle& shader, const TextureHandle& defaultTexture) :
     m_shader(shader) {
     auto s = m_shader->get();
-    if (s->get_descriptor_set_layouts().size() < 2){
+    if (s->descriptor_set_layouts().size() < 2){
         return;
     }
-    auto descriptorSetLayout = s->get_descriptor_set_layout(1);
-    std::vector<eagle::WeakPointer<eagle::DescriptorItem>> descriptors;
-    descriptors.reserve(descriptorSetLayout->bindings().size());
-    for (auto& binding : descriptorSetLayout->bindings()){
-        eagle::WeakPointer<eagle::DescriptorItem> descriptor;
+    auto descriptorSetLayout = s->descriptor_set_layout(1);
+    std::vector<std::shared_ptr<eagle::Descriptor>> descriptors;
+    descriptors.reserve(descriptorSetLayout->info().bindings.size());
+    for (auto& binding : descriptorSetLayout->info().bindings){
+        std::shared_ptr<eagle::Descriptor> descriptor;
         switch(binding.descriptorType){
             case eagle::DescriptorType::UNIFORM_BUFFER:
                 descriptor = context->create_uniform_buffer(binding.size, nullptr);
@@ -35,7 +35,11 @@ Material::Material(eagle::RenderingContext* context, const ShaderHandle& shader,
         m_bindingDescriptions.emplace(binding.binding, binding);
         descriptors.emplace_back(descriptor);
     }
-    m_descriptorSet = context->create_descriptor_set(descriptorSetLayout, descriptors);
+
+    eagle::DescriptorSetInfo descriptorSetInfo = {};
+    descriptorSetInfo.layout = descriptorSetLayout;
+    descriptorSetInfo.descriptors = descriptors;
+    m_descriptorSet = context->create_descriptor_set(descriptorSetInfo);
 }
 
 void Material::update_uniform(size_t binding, void* data, size_t size, size_t offset) {
@@ -49,7 +53,8 @@ void Material::update_uniform(size_t binding, void* data, size_t size, size_t of
         return;
     }
 
-    auto uniformBuffer = descriptor.cast<eagle::UniformBuffer>();
+
+    auto uniformBuffer = std::static_pointer_cast<eagle::UniformBuffer>(descriptor);
     assert(uniformBuffer);
     uniformBuffer->copy_from(data, size, offset);
     uniformBuffer->upload();
@@ -84,7 +89,7 @@ void Material::update_uniform(size_t binding, const std::string& name, void* dat
 
     auto& member = it->second;
 
-    auto uniformBuffer = descriptor.cast<eagle::UniformBuffer>();
+    auto uniformBuffer = std::static_pointer_cast<eagle::UniformBuffer>(descriptor);
     assert(uniformBuffer);
     uniformBuffer->copy_from(data, size, member.offset);
     uniformBuffer->upload();

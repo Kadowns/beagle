@@ -39,7 +39,10 @@ public:
 
         void operator()() {
             m_work();
-            m_complete = true;
+            {
+                std::unique_lock<std::mutex> lock(m_workMutex);
+                m_complete = true;
+            }
             m_workFinished.notify_all();
         }
 

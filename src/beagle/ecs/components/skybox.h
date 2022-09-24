@@ -62,16 +62,16 @@ struct SkyboxFilter {
 
         vertexBuffer = context->create_vertex_buffer({eagle::UpdateType::BAKED, sizeof(skyboxVertices), skyboxVertices});
         vertexShaderUbo = context->create_uniform_buffer(sizeof(VertexUbo), nullptr);
-        descriptorSet = context->create_descriptor_set((*material->shader())->get_descriptor_set_layout(0), {vertexShaderUbo});
+        descriptorSet = context->create_descriptor_set((*material->shader())->get_descriptor_set_layout(0));
         commandBuffer = context->create_command_buffer({eagle::CommandBufferLevel::SECONDARY});
     }
 
 
     MaterialHandle material;
-    eagle::WeakPointer<eagle::VertexBuffer> vertexBuffer;
-    eagle::WeakPointer<eagle::UniformBuffer> vertexShaderUbo;
-    eagle::WeakPointer<eagle::DescriptorSet> descriptorSet;
-    eagle::WeakPointer<eagle::CommandBuffer> commandBuffer;
+    std::shared_ptr<eagle::VertexBuffer> vertexBuffer;
+    std::shared_ptr<eagle::UniformBuffer> vertexShaderUbo;
+    std::shared_ptr<eagle::DescriptorSet> descriptorSet;
+    std::shared_ptr<eagle::CommandBuffer> commandBuffer;
 };
 
 }

@@ -6,6 +6,7 @@ set(CMAKE_CXX_STANDARD 17)
 set(BEAGLE_SOURCES
         src/beagle/beagle_global_definitions.h
         src/beagle/engine.cpp
+        src/beagle/renderer/environment.cpp
         src/beagle/ecs/entity.cpp
         src/beagle/ecs/job_graph.cpp
         src/beagle/ecs/job_executor.cpp

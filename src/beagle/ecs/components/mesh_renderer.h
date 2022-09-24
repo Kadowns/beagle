@@ -97,22 +97,15 @@ struct MeshFilter {
         bindings[4].shaderStage = eagle::ShaderStage::FRAGMENT;
 
 
-        descriptorSetLayout = context->create_descriptor_set_layout(bindings);
-        descriptorSet = context->create_descriptor_set(descriptorSetLayout, {
-            vertexShaderUbo,
-            fragmentShaderUbo,
-            (*irradianceMap),
-            (*prefilteredMap),
-            (*brdfLut)
-        });
+        descriptorSetLayout = context->create_descriptor_set_layout(bindings, 0);
+        descriptorSet = context->create_descriptor_set(descriptorSetLayout);
     }
 
     MeshPool* meshPool;
-    eagle::WeakPointer<eagle::CommandBuffer> commandBuffer;
-    eagle::WeakPointer<eagle::VertexBuffer> instanceBuffer;
-    eagle::WeakPointer<eagle::DescriptorSet> descriptorSet;
-    eagle::WeakPointer<eagle::DescriptorSetLayout> descriptorSetLayout;
-    eagle::WeakPointer<eagle::UniformBuffer> vertexShaderUbo, fragmentShaderUbo;
+    std::shared_ptr<eagle::CommandBuffer> commandBuffer;
+    std::shared_ptr<eagle::DescriptorSet> descriptorSet;
+    std::shared_ptr<eagle::DescriptorSetLayout> descriptorSetLayout;
+    std::shared_ptr<eagle::UniformBuffer> vertexShaderUbo, fragmentShaderUbo;
     std::vector<MaterialGroup> materialGroups;
 };
 
